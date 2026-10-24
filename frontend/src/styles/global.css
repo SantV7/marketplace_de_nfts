@@ -9,3 +9,28 @@ body {
     background-color: #140D0A;
     color: #F5F1EB;
 }
+
+.price-range-thumb {
+    pointer-events: none;
+}
+
+.price-range-thumb::-webkit-slider-thumb {
+    width: 12px;
+    height: 12px;
+    appearance: none;
+    pointer-events: auto;
+    border: 2px solid #140D0A;
+    border-radius: 9999px;
+    background-color: #D28A4C;
+    cursor: pointer;
+}
+
+.price-range-thumb::-moz-range-thumb {
+    width: 8px;
+    height: 8px;
+    pointer-events: auto;
+    border: 2px solid #140D0A;
+    border-radius: 9999px;
+    background-color: #D28A4C;
+    cursor: pointer;
+}
