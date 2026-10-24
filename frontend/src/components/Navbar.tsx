@@ -55,20 +55,20 @@ export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
     <div key={to} className="relative flex h-full shrink-0 items-center">
       <Link
         to={to}
-        className={`whitespace-nowrap text-[12px] transition-opacity hover:opacity-80 max-[700px]:text-[10px] max-[420px]:text-[8px] ${
+        className={`whitespace-nowrap text-[13px] transition-opacity hover:opacity-80 max-[700px]:text-[10px] max-[420px]:text-[8px] ${
           active ? 'font-semibold text-[#D28A4C]' : 'font-normal text-[#F5F1EB]'
         }`}
       >
         {label}
       </Link>
-      {active && <span className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#D28A4C]" />}
+      {active && <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#D28A4C]" />}
     </div>
   ));
 
   const searchControl = isSearchOpen ? (
     <form
       onSubmit={handleSearchSubmit}
-      className="flex h-8 w-[170px] items-center gap-2 border-b border-[#D28A4C] px-1 max-[700px]:w-[110px] max-[420px]:w-[82px]"
+      className="flex h-8 w-42.5 items-center gap-2 border-b border-[#D28A4C] px-1 max-[700px]:w-27.5 max-[420px]:w-20.5"
     >
       <Search className="h-4 w-4 shrink-0 text-[#D28A4C]" />
       <input
@@ -100,7 +100,7 @@ export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
       onClick={() => setIsSearchOpen(true)}
       className="flex h-8 w-8 shrink-0 items-center justify-center text-[#F5F1EB] transition-opacity hover:opacity-80"
     >
-      <Search className="h-[18px] w-[18px]" />
+      <Search className="h-4.5 w-4.5" />
     </button>
   );
 
@@ -112,7 +112,7 @@ export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
         isCartActive ? 'border-[#D28A4C] text-[#D28A4C]' : 'border-transparent text-[#F5F1EB]'
       }`}
     >
-      <ShoppingCart className="h-[18px] w-[18px]" />
+      <ShoppingCart className="h-4.5 w-4.5" />
       {badgeCount > 0 && (
         <span
           style={{ backgroundColor: '#D28A4C', color: '#140D0A' }}
@@ -127,10 +127,10 @@ export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
   return (
     <nav className="w-full bg-[#140D0A]">
       <div className="mx-auto w-full max-w-[1800px] px-10 font-mono max-[700px]:px-4 max-[420px]:px-2">
-        <div className="grid h-[52px] grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-[#F5F1EB]/10 max-[420px]:gap-1">
+        <div className="grid h-13 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-2 border-b border-[#F5F1EB]/10 max-[420px]:gap-1">
           <Link
             to="/"
-            className="relative z-10 justify-self-start whitespace-nowrap text-[12px] font-bold uppercase tracking-[0.10em] text-[#F5F1EB] transition-opacity hover:opacity-90 max-[420px]:text-[10px]"
+            className="relative z-10 justify-self-start whitespace-nowrap text-[14px] font-bold uppercase tracking-widest text-[#F5F1EB] transition-opacity hover:opacity-90 max-[420px]:text-[10px]"
           >
             KURIO
           </Link>
@@ -145,9 +145,9 @@ export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
             <Link
               to="/login"
               style={{ backgroundColor: '#D28A4C', color: '#140D0A' }}
-              className="flex h-[28px] w-[77px] shrink-0 items-center justify-center gap-1 rounded-[5px] text-[12px] font-semibold transition-opacity hover:opacity-90 max-[700px]:h-7 max-[700px]:w-7 max-[700px]:rounded-full"
+              className="flex h-7 w-19.25 shrink-0 items-center justify-center gap-1 rounded-[5px] text-xs font-semibold transition-opacity hover:opacity-90 max-[700px]:h-7 max-[700px]:w-7 max-[700px]:rounded-full"
             >
-              <LogIn className="h-[14px] w-[14px]" />
+              <LogIn className="h-3.5 w-3.5" />
               <span className="max-[700px]:hidden">Entrar</span>
             </Link>
           </div>
