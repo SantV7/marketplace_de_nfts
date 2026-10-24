@@ -1,9 +1,11 @@
+@import "tailwindcss";
+
 * {
-    margin: 0;
-    padding: 0;
     box-sizing: border-box;
 }
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+body {
+    margin: 0;
+    background-color: #140D0A;
+    color: #F5F1EB;
+}
