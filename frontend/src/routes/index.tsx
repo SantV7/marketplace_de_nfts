@@ -6,7 +6,54 @@ import Products from '@/pages/home/products/Products';
 import ProductDetail from '@/pages/nftDetails/ProductDetail';
 import Cart from '@/pages/cart/Cart';
 
-const rootRoute = createRootRoute();
+const validTabs = ['all', 'new', 'trending'] as const;
+const validSortOrders = ['recent', 'price-asc', 'price-desc'] as const;
+const validNetworks = ['Ethereum', 'Polygon', 'Solana'] as const;
+const validNetworkSet = new Set<string>(validNetworks);
+
+export type CatalogSearch = {
+  q?: string;
+  category?: string;
+  network?: string[];
+  min?: number;
+  max?: number;
+  sort?: (typeof validSortOrders)[number];
+  tab?: (typeof validTabs)[number];
+  page?: number;
+};
+
+export const validateCatalogSearch = (search: Record<string, unknown>): CatalogSearch => {
+  const query = typeof search.q === 'string' ? search.q.trim() : '';
+  const category = typeof search.category === 'string' ? search.category : '';
+  const networks = Array.isArray(search.network)
+    ? search.network.filter(
+        (network): network is string =>
+          typeof network === 'string' && validNetworkSet.has(network),
+      )
+    : typeof search.network === 'string' && validNetworkSet.has(search.network)
+      ? [search.network]
+      : [];
+  const min = Number(search.min);
+  const max = Number(search.max);
+  const page = Number(search.page);
+  const sort = validSortOrders.find((order) => order === search.sort);
+  const tab = validTabs.find((value) => value === search.tab);
+
+  return {
+    ...(query ? { q: query } : {}),
+    ...(category ? { category } : {}),
+    ...(networks.length ? { network: networks } : {}),
+    ...(Number.isFinite(min) && min >= 0 ? { min } : {}),
+    ...(Number.isFinite(max) && max > 0 ? { max } : {}),
+    ...(sort ? { sort } : {}),
+    ...(tab ? { tab } : {}),
+    ...(Number.isInteger(page) && page > 0 ? { page } : {}),
+  };
+};
+
+const rootRoute = createRootRoute({
+  validateSearch: validateCatalogSearch,
+});
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -23,8 +70,7 @@ const nftDetailRoute = createRoute({
 const marketRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/market',
-  validateSearch: (search: Record<string, unknown>): { q?: string } =>
-    typeof search.q === 'string' ? { q: search.q } : {},
+  validateSearch: validateCatalogSearch,
   component: () => (
     <main className="min-h-screen bg-[#140D0A]">
       <Navbar />

@@ -1,21 +1,51 @@
 import { useMemo, useState } from 'react';
+import { useLocation, useRouterState } from '@tanstack/react-router';
 import ProductCatalog from './ProductCatalog';
 import ProductSidebar from './ProductSidebar';
 import { initialPriceRange, nfts, type SortOrder, type TabId } from './productData';
+import { router, type CatalogSearch } from '@/routes';
 
 const pageSize = 9;
+const emptyNetworks: string[] = [];
 
 const Products = () => {
-  const [activeTab, setActiveTab] = useState<TabId>('all');
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
-  const [selectedNetworks, setSelectedNetworks] = useState<string[]>([]);
-  const [draftPriceRange, setDraftPriceRange] = useState(initialPriceRange);
-  const [priceRange, setPriceRange] = useState(initialPriceRange);
-  const [sortOrder, setSortOrder] = useState<SortOrder>('recent');
-  const [currentPage, setCurrentPage] = useState(1);
+  const search = useRouterState({ select: (state) => state.location.search });
+
+  return <ProductsContent key={JSON.stringify(search)} search={search} />;
+};
+
+const ProductsContent = ({ search }: { search: CatalogSearch }) => {
+  const location = useLocation();
+  const updateSearch = (updater: (previous: CatalogSearch) => CatalogSearch) => {
+    if (location.pathname === '/market') {
+      void router.navigate({ to: '/market', search: updater });
+    } else {
+      void router.navigate({ to: '/', search: updater });
+    }
+  };
+  const [draftPriceRange, setDraftPriceRange] = useState({
+    min: search.min ?? initialPriceRange.min,
+    max: search.max ?? initialPriceRange.max,
+  });
+
+  const activeTab: TabId = search.tab ?? 'all';
+  const selectedCategory = search.category ?? null;
+  const selectedNetworks = search.network ?? emptyNetworks;
+  const priceRange = {
+    min: search.min ?? initialPriceRange.min,
+    max: search.max ?? initialPriceRange.max,
+  };
+  const sortOrder: SortOrder = search.sort ?? 'recent';
+  const currentPage = search.page ?? 1;
 
   const filteredNfts = useMemo(() => {
     const filtered = nfts.filter((nft) => {
+      const query = search.q?.toLocaleLowerCase() ?? '';
+      const matchesQuery =
+        !query ||
+        nft.name.toLocaleLowerCase().includes(query) ||
+        String(nft.id).includes(query) ||
+        String(nft.id).padStart(3, '0').includes(query);
       const matchesTab =
         activeTab === 'all' ||
         (activeTab === 'new' && nft.isNew) ||
@@ -25,29 +55,34 @@ const Products = () => {
         selectedNetworks.length === 0 || selectedNetworks.includes(nft.network);
       const matchesPrice = nft.price >= priceRange.min && nft.price <= priceRange.max;
 
-      return matchesTab && matchesCategory && matchesNetwork && matchesPrice;
+      return matchesQuery && matchesTab && matchesCategory && matchesNetwork && matchesPrice;
     });
 
     if (sortOrder === 'price-asc') return filtered.sort((a, b) => a.price - b.price);
     if (sortOrder === 'price-desc') return filtered.sort((a, b) => b.price - a.price);
     return filtered;
-  }, [activeTab, priceRange, selectedCategory, selectedNetworks, sortOrder]);
+  }, [activeTab, priceRange.max, priceRange.min, search.q, selectedCategory, selectedNetworks, sortOrder]);
 
   const pageCount = Math.max(3, Math.ceil(filteredNfts.length / pageSize));
   const pageProducts = filteredNfts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const toggleNetwork = (network: string) => {
-    setSelectedNetworks((current) =>
-      current.includes(network)
-        ? current.filter((selected) => selected !== network)
-        : [...current, network],
-    );
-    setCurrentPage(1);
+    updateSearch((previous) => {
+      const currentNetworks = previous.network ?? emptyNetworks;
+      const nextNetworks = currentNetworks.includes(network)
+        ? currentNetworks.filter((selected) => selected !== network)
+        : [...currentNetworks, network];
+
+      return { ...previous, network: nextNetworks.length ? nextNetworks : undefined, page: undefined };
+    });
   };
 
   const selectCategory = (category: string) => {
-    setSelectedCategory((current) => (current === category ? null : category));
-    setCurrentPage(1);
+    updateSearch((previous) => ({
+      ...previous,
+      category: previous.category === category ? undefined : category,
+      page: undefined,
+    }));
   };
 
   return (
@@ -64,8 +99,18 @@ const Products = () => {
         onToggleNetwork={toggleNetwork}
         onDraftPriceChange={setDraftPriceRange}
         onApplyPriceRange={() => {
-          setPriceRange(draftPriceRange);
-          setCurrentPage(1);
+          updateSearch((previous) => ({
+            ...previous,
+            min:
+              draftPriceRange.min === initialPriceRange.min
+                ? undefined
+                : draftPriceRange.min,
+            max:
+              draftPriceRange.max === initialPriceRange.max
+                ? undefined
+                : draftPriceRange.max,
+            page: undefined,
+          }));
         }}
       />
       <ProductCatalog
@@ -74,12 +119,23 @@ const Products = () => {
         sortOrder={sortOrder}
         currentPage={currentPage}
         pageCount={pageCount}
-        onTabChange={(tab) => {
-          setActiveTab(tab);
-          setCurrentPage(1);
-        }}
-        onSortChange={setSortOrder}
-        onPageChange={setCurrentPage}
+        onTabChange={(tab) =>
+          updateSearch((previous) => ({
+            ...previous,
+            tab: tab === 'all' ? undefined : tab,
+            page: undefined,
+          }))
+        }
+        onSortChange={(sort) =>
+          updateSearch((previous) => ({
+            ...previous,
+            sort: sort === 'recent' ? undefined : sort,
+            page: undefined,
+          }))
+        }
+        onPageChange={(page) =>
+          updateSearch((previous) => ({ ...previous, page: page === 1 ? undefined : page }))
+        }
       />
     </section>
   );

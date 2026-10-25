@@ -1,5 +1,6 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
-import { Link, useLocation, useNavigate } from '@tanstack/react-router';
+import { Link, useLocation } from '@tanstack/react-router';
+import { router } from '@/routes';
 import { Search, ShoppingCart, X } from 'lucide-react';
 import { useCartItems } from '@/libs/cartStore';
 
@@ -10,8 +11,8 @@ export const Navbar = () => {
   const badgeCount = cartItems.reduce((count, item) => count + item.quantity, 0);
 
   const location = useLocation();
-  const navigate = useNavigate();
   const currentPath = location.pathname;
+  const currentQuery = new URLSearchParams(location.searchStr).get('q') ?? '';
 
   const isHomeActive =
     currentPath === '/' ||
@@ -38,9 +39,9 @@ export const Navbar = () => {
 
     if (!query) return;
 
-    void navigate({
+    void router.navigate({
       to: '/market',
-      search: { q: query },
+      search: (previous) => ({ ...previous, q: query, page: undefined }),
     });
     setIsSearchOpen(false);
   };
@@ -87,6 +88,17 @@ export const Navbar = () => {
         onClick={() => {
           setSearchValue('');
           setIsSearchOpen(false);
+          if (currentPath === '/market') {
+            void router.navigate({
+              to: '/market',
+              search: (previous) => ({ ...previous, q: undefined, page: undefined }),
+            });
+          } else if (currentPath === '/') {
+            void router.navigate({
+              to: '/',
+              search: (previous) => ({ ...previous, q: undefined, page: undefined }),
+            });
+          }
         }}
         aria-label="Fechar busca"
         className="text-[#8C7A6B] hover:text-[#F5F1EB]"
@@ -98,7 +110,10 @@ export const Navbar = () => {
     <button
       type="button"
       aria-label="Buscar NFTs"
-      onClick={() => setIsSearchOpen(true)}
+      onClick={() => {
+        setSearchValue(currentQuery);
+        setIsSearchOpen(true);
+      }}
       className="flex h-8 w-8 shrink-0 items-center justify-center text-[#F5F1EB] transition-opacity hover:opacity-80"
     >
       <Search className="h-4.5 w-4.5" />

@@ -21,8 +21,10 @@ interface ProductSidebarProps {
 
 const ProductSidebar = ({
   selectedCategory,
+  selectedNetworks,
   draftPriceRange,
   onSelectCategory,
+  onToggleNetwork,
   onDraftPriceChange,
   onApplyPriceRange,
 }: ProductSidebarProps) => {
@@ -178,10 +180,21 @@ const ProductSidebar = ({
             {networks.map(({ name, count }) => (
               <div
                 key={name}
-                className="flex items-center justify-between gap-2 px-2 py-1.5 text-xs text-[#CFB28C]"
+                className="flex items-center justify-between gap-2"
               >
-                <span>{name}</span>
-                <span>({count})</span>
+                <button
+                  type="button"
+                  aria-pressed={selectedNetworks.includes(name)}
+                  onClick={() => onToggleNetwork(name)}
+                  className={`flex w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-xs transition-colors ${
+                    selectedNetworks.includes(name)
+                      ? 'text-[#D28A4C]'
+                      : 'text-[#CFB28C] hover:text-[#F5F1EB]'
+                  }`}
+                >
+                  <span>{name}</span>
+                  <span>({count})</span>
+                </button>
               </div>
             ))}
           </div>
