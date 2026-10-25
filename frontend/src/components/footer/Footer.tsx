@@ -1,3 +1,4 @@
+import { useRef, useState, type FormEvent } from 'react';
 import {
   ShieldCheck,
   Palette,
@@ -20,6 +21,28 @@ import {
 } from 'lucide-react';
 
 const Footer = () => {
+  const emailInputRef = useRef<HTMLInputElement>(null);
+  const [emailError, setEmailError] = useState('');
+
+  const handleNewsletterSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const emailInput = emailInputRef.current;
+    if (!emailInput) return;
+
+    if (!emailInput.validity.valid) {
+      setEmailError(
+        emailInput.validity.valueMissing
+          ? 'Informe seu e-mail.'
+          : 'Digite um endereço de e-mail válido.',
+      );
+      emailInput.focus();
+      return;
+    }
+
+    setEmailError('');
+  };
+
   return (
     <footer className="bg-[#140D0A] pt-16 font-mono text-[#F5F1EB] border-t border-[#3D2C24]">
       <div className="mx-auto max-w-7xl px-4 pb-12">
@@ -61,19 +84,45 @@ const Footer = () => {
                 Receba lançamentos selecionados, histórias de criadores e novidades do mercado.
               </p>
             </div>
-            <div className="mt-4 flex gap-2">
-              <input
-                type="email"
-                placeholder="digite seu e-mail..."
-                className="w-full rounded-lg bg-[#140D0A] px-3 py-2 text-xs text-[#F5F1EB] outline-none border border-[#3D2C24] focus:border-[#D28A4C]"
-              />
-              <button
-                type="button"
-                className="rounded-lg bg-[#D28A4C] px-4 py-2 text-xs font-bold text-[#140D0A] transition-colors hover:bg-[#E09A5C]"
-              >
-                Enviar
-              </button>
-            </div>
+            <form
+              className="mt-4"
+              noValidate
+              onSubmit={handleNewsletterSubmit}
+            >
+              <div className="flex gap-2">
+                <input
+                  ref={emailInputRef}
+                  name="newsletter-email"
+                  type="email"
+                  required
+                  placeholder="digite seu e-mail..."
+                  aria-label="E-mail para receber novidades"
+                  aria-invalid={Boolean(emailError)}
+                  aria-describedby={emailError ? 'newsletter-email-error' : undefined}
+                  onChange={() => {
+                    if (emailInputRef.current?.validity.valid) setEmailError('');
+                  }}
+                  className={`w-full rounded-lg bg-[#140D0A] px-3 py-2 text-xs text-[#F5F1EB] outline-none border focus:border-[#D28A4C] ${
+                    emailError ? 'border-red-500' : 'border-[#3D2C24]'
+                  }`}
+                />
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#D28A4C] px-4 py-2 text-xs font-bold text-[#140D0A] transition-colors hover:bg-[#E09A5C]"
+                >
+                  Enviar
+                </button>
+              </div>
+              {emailError && (
+                <p
+                  id="newsletter-email-error"
+                  role="alert"
+                  className="mt-2 rounded-md border border-red-500/70 bg-red-950/60 px-3 py-2 text-xs text-red-300"
+                >
+                  {emailError}
+                </p>
+              )}
+            </form>
           </div>
         </div>
 

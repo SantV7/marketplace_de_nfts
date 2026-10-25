@@ -51,9 +51,9 @@ const ProductSidebar = ({
   };
 
   return (
-    <aside className="flex w-full max-w-67.7 shrink-0 flex-col gap-4 font-mono">
-      <div className="bg-[#231712] p-4 rounded-xl">
-        <h2 className="mb-3 flex items-center gap-2 text-sm font-bold text-[#F5F1EB]">
+    <aside className="flex w-full max-w-67.5 shrink-0 flex-col gap-6 font-mono">
+      <div className="bg-[#231712] p-6 rounded-2xl">
+        <h2 className="mb-4 flex items-center gap-2 text-[15px] font-medium leading-4 text-[#F5F1EB]">
           <Layers className="h-4 w-4 text-[#D28A4C]" />
           Coleções
         </h2>
@@ -69,19 +69,19 @@ const ProductSidebar = ({
           ))}
         </div>
 
-        <div className="mt-6">
+        <div className="mt-8">
           <div className="flex items-center justify-between">
-            <h3 className="flex items-center gap-2 text-sm font-bold text-[#F5F1EB]">
+            <h3 className="flex items-center gap-2 text-[15px] font-medium leading-4 text-[#F5F1EB]">
               <SlidersHorizontal className="h-4 w-4 text-[#D28A4C]" />
               Faixa de preço
             </h3>
             <div className="flex items-center gap-1">
-              <span className="text-[10px] text-[#CFB28C]">Min/Max</span>
+              <span className="text-[11px] text-[#CFB28C]">Min/Max</span>
             </div>
           </div>
 
-          <div className="relative mt-3 h-4">
-            <div className="absolute left-1 right-1 top-1/2 h-0.5 -translate-y-1/2 bg-[#D28A4C]" />
+          <div className="relative mt-4 h-4">
+            <div className="absolute left-1 right-1 top-1/2 h-1 -translate-y-1/2 bg-[#D28A4C] rounded-full" />
             <input
               type="range"
               aria-label="Preço mínimo em ETH"
@@ -122,7 +122,7 @@ const ProductSidebar = ({
               <button
                 type="button"
                 onClick={handleDecrementMin}
-                className="flex h-5 w-5 items-center justify-center rounded bg-[#140D0A] text-[#D28A4C] hover:bg-[#3D2C24]"
+                className="flex h-5 w-5 items-center justify-center rounded bg-[#140D0A] text-[#D28A4C] hover:bg-[#3D2C24] cursor-pointer"
               >
                 -
               </button>
@@ -130,7 +130,7 @@ const ProductSidebar = ({
               <button
                 type="button"
                 onClick={handleIncrementMin}
-                className="flex h-5 w-5 items-center justify-center rounded bg-[#140D0A] text-[#D28A4C] hover:bg-[#3D2C24]"
+                className="flex h-5 w-5 items-center justify-center rounded bg-[#140D0A] text-[#D28A4C] hover:bg-[#3D2C24] cursor-pointer"
               >
                 +
               </button>
@@ -141,7 +141,7 @@ const ProductSidebar = ({
               <button
                 type="button"
                 onClick={handleDecrementMax}
-                className="flex h-5 w-5 items-center justify-center rounded bg-[#140D0A] text-[#D28A4C] hover:bg-[#3D2C24]"
+                className="flex h-5 w-5 items-center justify-center rounded bg-[#140D0A] text-[#D28A4C] hover:bg-[#3D2C24] cursor-pointer"
               >
                 -
               </button>
@@ -149,28 +149,28 @@ const ProductSidebar = ({
               <button
                 type="button"
                 onClick={handleIncrementMax}
-                className="flex h-5 w-5 items-center justify-center rounded bg-[#140D0A] text-[#D28A4C] hover:bg-[#3D2C24]"
+                className="flex h-5 w-5 items-center justify-center rounded bg-[#140D0A] text-[#D28A4C] hover:bg-[#3D2C24] cursor-pointer"
               >
                 +
               </button>
             </div>
           </div>
 
-          <p className="mt-2 text-[10px] text-[#CFB28C]">
+          <p className="mt-3 text-[11px] text-[#CFB28C]">
             Preço: {draftPriceRange.min.toFixed(2)} – {draftPriceRange.max.toFixed(2)} ETH
           </p>
 
           <button
             type="button"
             onClick={onApplyPriceRange}
-            className="mt-2 w-full rounded bg-[#D28A4C] px-3 py-1.5 text-xs font-bold text-[#140D0A] transition-colors hover:bg-[#E09A5C]"
+            className="mt-3 w-full rounded-lg bg-[#D28A4C] px-3 py-2 text-[16px] font-bold leading-6.5 text-[#140D0A] transition-colors hover:bg-[#E09A5C] cursor-pointer"
           >
             Aplicar
           </button>
         </div>
 
-        <div className="mt-6">
-          <h3 className="mb-2 flex items-center gap-2 text-sm font-bold text-[#F5F1EB]">
+        <div className="mt-8">
+          <h3 className="mb-3 flex items-center gap-2 text-[15px] font-medium leading-4 text-[#F5F1EB]">
             <Network className="h-4 w-4 text-[#D28A4C]" />
             Rede
           </h3>
@@ -188,17 +188,17 @@ const ProductSidebar = ({
         </div>
       </div>
 
-      <article className="bg-[#231712] p-3 text-center rounded-xl cursor-pointer border border-transparent transition-all duration-300 hover:border-sky-400 hover:scale-[1.02]">
-        <h2 className="text-sm font-bold uppercase text-[#D28A4C]">NFT em destaque</h2>
+      <article className="bg-[#231712] p-4 text-center rounded-2xl cursor-pointer border border-transparent transition-all duration-300 hover:border-sky-400 hover:scale-[1.02]">
+        <h2 className="text-[24px] font-bold leading-8 text-[#D28A4C]">NFT EM DESTAQUE</h2>
         <div className="mt-1 flex items-center justify-center gap-1.5">
           <ClockAlert className="h-4 w-4 text-[#D28A4C]" />
-          <p className="text-xs font-bold uppercase text-[#F5F1EB]">Oferta limitada</p>
+          <p className="text-[22px] font-bold leading-4 text-[#F5F1EB]">OFERTA LIMITADA</p>
         </div>
         <img
           src={featuredNft}
           alt="NFT Sage Nomad em destaque"
           loading="lazy"
-          className="mx-auto mt-2 aspect-square w-[calc(100%-30px)] h-[calc(100%-30px)] rounded-xl object-cover max-h-52.5"
+          className="mx-auto mt-4 aspect-square w-full rounded-2xl object-cover max-h-62.5"
         />
       </article>
     </aside>

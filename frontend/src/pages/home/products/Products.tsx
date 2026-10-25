@@ -33,7 +33,7 @@ const Products = () => {
     return filtered;
   }, [activeTab, priceRange, selectedCategory, selectedNetworks, sortOrder]);
 
-  const pageCount = Math.max(1, Math.ceil(filteredNfts.length / pageSize));
+  const pageCount = Math.max(3, Math.ceil(filteredNfts.length / pageSize));
   const pageProducts = filteredNfts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   const toggleNetwork = (network: string) => {
@@ -53,7 +53,7 @@ const Products = () => {
   return (
     <section
       aria-label="Explorar NFTs"
-      className="mx-auto grid w-full max-w-360 grid-cols-1 items-start gap-6 px-4 pb-16 font-mono sm:px-6 lg:grid-cols-[270px_minmax(0,1fr)] lg:gap-10 lg:px-10"
+      className="mx-auto grid w-full max-w-360 grid-cols-1 items-start gap-6 px-4 pb-16 font-mono sm:px-6 md:grid-cols-[270px_minmax(0,1fr)] md:gap-10 lg:px-27.5"
     >
       <ProductSidebar
         selectedCategory={selectedCategory}

@@ -1,6 +1,6 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
-import { LogIn, Search, ShoppingCart, X } from 'lucide-react';
+import { Search, ShoppingCart, X } from 'lucide-react';
 
 interface NavbarProps {
   badgeCount?: number;
@@ -149,12 +149,22 @@ export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
               style={{ backgroundColor: '#D28A4C', color: '#140D0A' }}
               className="flex h-7 w-19.25 shrink-0 items-center justify-center gap-1 rounded-[5px] text-xs font-semibold transition-opacity hover:opacity-90 max-[700px]:h-7 max-[700px]:w-7 max-[700px]:rounded-full"
             >
-              <LogIn className="h-3.5 w-3.5" />
+              <svg 
+                width="16" 
+                height="16" 
+                viewBox="0 0 20 20" 
+                fill="none" 
+                xmlns="http://www.w3.org/2000/svg"
+                className="shrink-0"
+              >
+                <path d="M18.1592 10.1006H8.125" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" stroke="#140D0A"/>
+                <path d="M15.7202 7.67059L18.1602 10.1006L15.7202 12.5306" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" stroke="#140D0A"/>
+                <path d="M13.6332 6.35825C13.3582 3.37492 12.2415 2.29158 7.79985 2.29158C1.88234 2.29158 1.88234 4.21658 1.88234 9.99992C1.88234 15.7833 1.88234 17.7083 7.79985 17.7083C12.2415 17.7083 13.3582 16.6249 13.6332 13.6416" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" stroke="#140D0A"/>
+              </svg>
               <span className="max-[700px]:hidden">Entrar</span>
             </Link>
           </div>
         </div>
-
       </div>
     </nav>
   );

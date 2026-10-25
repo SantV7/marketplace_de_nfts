@@ -8,7 +8,6 @@ export interface NftDetail {
   name: string;
   price: number;
   rating: number;
-  totalReviews: number;
   description: string;
   editions: string[];
   tokenId: string;
@@ -30,6 +29,16 @@ const allNftsCatalog: Record<string, { name: string; image: string; price: numbe
   '207': { name: 'Golden Beat', image: goldenBeat, price: 0.99 },
   '160': { name: 'Golden Signal', image: goldenBeat, price: 0.39 },
   '552': { name: 'Neon Vessel', image: brownNft, price: 1.99 },
+  '73': { name: 'Golden Hour', image: goldenBeat, price: 0.79 },
+  '224': { name: 'Solar Drift', image: cosmicBloom, price: 1.49 },
+  '305': { name: 'Violet Horizon', image: cosmicBloom, price: 1.59 },
+  '416': { name: 'Obsidian Crown', image: brownNft, price: 2.09 },
+  '528': { name: 'Amber Pulse', image: goldenBeat, price: 0.89 },
+  '639': { name: 'Echoes of Dawn', image: goldenBeat, price: 1.09 },
+  '741': { name: 'Emerald Guardian', image: brownNft, price: 2.49 },
+  '852': { name: 'Lunar Muse', image: cosmicBloom, price: 1.89 },
+  '963': { name: 'Midnight Muse', image: brownNft, price: 1.69 },
+  '174': { name: 'Golden Reverie', image: goldenBeat, price: 1.29 },
 };
 
 export const getNftDetailById = (id: string): NftDetail | null => {
@@ -41,7 +50,6 @@ export const getNftDetailById = (id: string): NftDetail | null => {
     name: found.name,
     price: found.price,
     rating: 5,
-    totalReviews: 19,
     description: `Um colecionável digital exclusivo da coleção Kurio Editions, verificado na Ethereum, com arte desbloqueável e acesso para colecionadores.`,
     editions: ['1/1', '1/10', '1/50', 'ABERTA'],
     tokenId: `#${String(id).padStart(3, '0')}`,

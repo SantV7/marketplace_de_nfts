@@ -40,10 +40,10 @@ const blogPosts = [
 
 const BlogSection = () => {
   return (
-    <section className="mx-auto max-w-7xl px-4 py-16 font-mono">
+    <section className="mx-auto max-w-360 px-10 py-16 font-mono lg:px-27.5">
       <div className="text-center">
-        <h2 className="text-2xl font-bold text-[#F5F1EB]">Diário da Cunhagem</h2>
-        <p className="mt-1 text-xs text-[#CFB28C]">
+        <h2 className="text-[28px] font-bold leading-9 text-[#F5F1EB]">Diário da Cunhagem</h2>
+        <p className="mt-1 text-[14px] leading-6 text-[#CFB28C]">
           Histórias, guias e insights para colecionadores sobre o universo da propriedade digital.
         </p>
       </div>
@@ -52,19 +52,19 @@ const BlogSection = () => {
         {blogPosts.map((post) => (
           <article
             key={post.id}
-            className="flex flex-col rounded-xl bg-[#231712] p-4 border border-transparent transition-all duration-300 hover:border-[#D28A4C] hover:scale-[1.02] cursor-pointer"
+            className="flex flex-col rounded-2xl bg-[#231712] p-4 border border-transparent transition-all duration-300 hover:border-[#D28A4C] hover:scale-[1.02] cursor-pointer"
           >
             <img
               src={post.image}
               alt={post.title}
-              className="mb-4 aspect-4/3 w-full rounded-lg object-cover"
+              className="mb-4 aspect-4/3 w-full rounded-xl object-cover"
             />
-            <div className="text-[10px] text-[#CFB28C]">
+            <div className="text-[12px] font-medium leading-4 text-[#CFB28C]">
               <span>{post.date}</span> | <span>{post.readTime}</span>
             </div>
-            <h3 className="mt-2 text-sm font-bold text-[#F5F1EB]">{post.title}</h3>
-            <p className="mt-1 text-xs text-[#CFB28C] line-clamp-2">{post.description}</p>
-            <span className="mt-4 text-xs font-semibold text-[#D28A4C] hover:underline">
+            <h3 className="mt-2 text-[16px] font-bold leading-5.5 text-[#F5F1EB]">{post.title}</h3>
+            <p className="mt-1 text-[12px] leading-4.5 text-[#CFB28C] line-clamp-2">{post.description}</p>
+            <span className="mt-4 text-[12px] font-bold leading-3.5 text-[#D28A4C] hover:underline">
               Ler mais →
             </span>
           </article>
