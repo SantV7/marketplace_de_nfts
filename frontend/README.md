@@ -79,7 +79,8 @@ No estado atual, não há scripts de testes Playwright ou auditoria Lighthouse c
 
 - Rota `/payment` com layouts específicos por viewport: formulário do colecionador e revisão dos NFTs no desktop; carteiras conectadas, seleção de carteira/rede e total no mobile.
 - Validação nativa dos campos obrigatórios no desktop; seletores de carteira/rede são demonstrações visuais e não conectam carteiras.
-- A confirmação valida os dados preenchidos e informa que o fluxo é demonstrativo; não cria pedidos, não conecta carteiras e não envia transações.
+- Ao confirmar, abre um recibo demonstrativo em `/order-confirmation`, calculado a partir do carrinho, cupom e carteira selecionada. Ele fica disponível após atualizar a página da sessão.
+- A prévia usa um identificador `DEMO-`, não remove os itens do carrinho e avisa que não cria pedido real, não conecta carteira nem envia transação. O botão abre a página inicial do Etherscan, não um link de transação.
 - A composição mobile está implementada, mas ainda precisa de conferência visual nos viewports do teste.
 
 ### Catálogo de demonstração
@@ -131,6 +132,9 @@ src/
 │   ├── Checkout.tsx            # Composição da tela responsiva de pagamento
 │   ├── CheckoutProfileForm.tsx # Dados do colecionador e validação nativa
 │   ├── CheckoutOrderSummary.tsx # NFTs, valores e opções demonstrativas de carteira
+│   ├── OrderConfirmation.tsx   # Recibo responsivo para confirmação demonstrativa
+│   ├── DemoOrderConfirmation.tsx # Rota e estado de sessão da prévia de recibo
+│   ├── demoReceipt.ts          # Criação e persistência temporária do recibo
 │   └── paymentData.ts          # Opções locais de redes e carteiras demonstrativas
 ├── routes/index.tsx            # Rotas declaradas com TanStack Router
 └── styles/global.css           # Estilos globais e controles de preço
@@ -146,7 +150,7 @@ O desafio pede uma experiência completa de descoberta, compra e conta do coleci
 | Descoberta de NFTs | Busca, filtros, abas, ordenação e paginação locais em `/` e `/market`; o estado aplicado é sincronizado com a URL. Dados e resultados ainda não vêm de API. |
 | Detalhes do NFT | Página em `/nft/$id`, com estado para identificador inexistente. Compra adiciona ao carrinho; dados e limites por edição são demonstrativos, e favoritos persistentes não estão implementados. |
 | Carrinho, cotação e cupons | Adicionar, alterar quantidade e remover itens com persistência local; cupom `KURIO10`, disponibilidade e taxa de rede são demonstrativos. O layout mobile foi conferido em 390 × 844 px; cotação real e atualização de disponibilidade não existem. |
-| Pagamento e confirmação | Layouts desktop e mobile, validação local do formulário desktop e seleção visual de carteira/rede. O layout mobile foi conferido em 390 × 844 px; a interface informa que não envia pedido. API, conexão, estados de confirmação/recusa e recibo não estão implementados. |
+| Pagamento e confirmação | Layouts desktop/mobile e recibo demonstrativo calculado dos itens, valores e carteira selecionada. Identificador prefixado com `DEMO-`; nenhuma transação real é enviada. Ainda faltam API, pedido idempotente, conexão, estados reais de confirmação/recusa e recibo imutável do servidor. |
 | Cadastro, login e sessão | Há um link e uma rota inicial de login; autenticação, persistência de sessão e proteção de rotas não foram implementadas. |
 | Perfil e carteiras | Não implementados. |
 | REST, Axios e TanStack Query | Dependências disponíveis; contratos, cliente e integração ainda não implementados. |

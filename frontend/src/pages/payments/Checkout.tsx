@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react';
-import { Link, useSearch } from '@tanstack/react-router';
+import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import Footer from '@/components/footer/Footer';
 import Navbar from '@/components/navbar/Navbar';
@@ -12,6 +12,7 @@ import {
 import CheckoutOrderSummary from './CheckoutOrderSummary';
 import CheckoutMobile from './CheckoutMobile';
 import CheckoutProfileForm from './CheckoutProfileForm';
+import { createDemoReceipt, saveDemoReceipt } from './demoReceipt';
 import {
   connectedWallets,
   walletProviders,
@@ -21,6 +22,7 @@ import {
 
 const Checkout = () => {
   const { coupon } = useSearch({ from: '/payment' });
+  const navigate = useNavigate();
   const items = useCartItems();
   const [selectedProvider, setSelectedProvider] = useState<WalletProviderId>(
     walletProviders[2].id,
@@ -38,11 +40,27 @@ const Checkout = () => {
   const fee = items.length > 0 ? networkFee : 0n;
   const total = subtotal - discount + fee;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setConfirmationMessage(
-      'Dados validados. Nenhum pedido ou pagamento foi enviado nesta versão demonstrativa.',
-    );
+    if (items.length === 0) return;
+
+    try {
+      const receipt = createDemoReceipt({
+        items,
+        total,
+        discount,
+        fee,
+        providerId: selectedProvider,
+        walletId: selectedWallet,
+      });
+      saveDemoReceipt(receipt);
+      await navigate({ to: '/order-confirmation' });
+    } catch (error) {
+      console.error('Não foi possível criar a prévia do recibo.', error);
+      setConfirmationMessage(
+        'Não foi possível abrir a confirmação demonstrativa. Tente novamente.',
+      );
+    }
   };
 
   const handleSwitchWallet = () => {

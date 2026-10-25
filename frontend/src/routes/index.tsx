@@ -6,6 +6,7 @@ import Products from '@/pages/home/products/Products';
 import ProductDetail from '@/pages/nftDetails/ProductDetail';
 import Cart from '@/pages/cart/Cart';
 import Checkout from '@/pages/payments/Checkout';
+import DemoOrderConfirmation from '@/pages/payments/DemoOrderConfirmation';
 
 const validTabs = ['all', 'new', 'trending'] as const;
 const validSortOrders = ['recent', 'price-asc', 'price-desc'] as const;
@@ -108,6 +109,12 @@ const paymentRoute = createRoute({
   component: Checkout,
 });
 
+const orderConfirmationRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/order-confirmation',
+  component: DemoOrderConfirmation,
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
@@ -122,6 +129,7 @@ const routeTree = rootRoute.addChildren([
   learnRoute,
   cartRoute,
   paymentRoute,
+  orderConfirmationRoute,
   loginRoute,
 ]);
 
