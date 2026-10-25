@@ -1,0 +1,128 @@
+import { Minus, Plus } from 'lucide-react';
+import type { CartItem } from '@/libs/cartStore';
+import { formatEth, toEthUnits } from './cartPricing';
+
+interface CartItemListProps {
+  items: CartItem[];
+  error: string;
+  onQuantityChange: (itemId: string, quantity: number) => void;
+  onRemove: (itemId: string) => void;
+}
+
+const CartItemList = ({ items, error, onQuantityChange, onRemove }: CartItemListProps) => (
+  <section aria-label="Itens no carrinho" className="min-w-0">
+    <div className="hidden grid-cols-[minmax(220px,1fr)_100px_130px_100px_40px] gap-4 border-b border-[#3D2C24] px-4 pb-3 text-xs text-[#F5F1EB] md:grid">
+      <span>NFT</span>
+      <span>Preço</span>
+      <span>Edições</span>
+      <span>Total</span>
+      <span />
+    </div>
+    {error && (
+      <p role="alert" className="mt-4 text-xs text-red-400">
+        {error}
+      </p>
+    )}
+    <ul className="space-y-2">
+      {items.map((item) => {
+        const itemTotal = toEthUnits(item.price) * BigInt(item.quantity);
+
+        return (
+          <li
+            key={item.id}
+            className="grid min-h-17.5 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-3 border-b border-[#140D0A] bg-[#231712] px-3 py-2 transition-colors hover:bg-[#2D1C14] md:grid-cols-[minmax(220px,1fr)_100px_130px_100px_40px] md:gap-4 md:py-0 md:pl-4 md:pr-6"
+          >
+            <div className="flex min-w-0 items-center gap-3">
+              <img
+                src={item.image}
+                alt={`${item.name}${item.styleLabel && item.styleLabel !== 'Normal' ? ` - ${item.styleLabel}` : ''}`}
+                style={{ filter: item.styleFilter ?? 'none' }}
+                className="h-14 w-14 shrink-0 rounded-md object-cover"
+              />
+              <div className="min-w-0">
+                <h2 className="truncate text-sm font-bold leading-4">{item.name}</h2>
+                <p className="mt-1 text-xs font-normal leading-4 text-[#B39463]">
+                  #{String(item.nftId).padStart(3, '0')} · {item.edition}
+                  {item.styleLabel && item.styleLabel !== 'Normal' && ` · ${item.styleLabel}`}
+                </p>
+              </div>
+            </div>
+            <div className="text-right md:text-left">
+              <span className="block text-[10px] text-[#F5F1EB] md:hidden">Preço</span>
+              <span className="text-sm font-semibold">{item.price} ETH</span>
+            </div>
+            <div className="col-span-2 flex items-center justify-between md:col-span-1 md:justify-start">
+              <span className="text-[10px] text-[#F5F1EB] md:hidden">Edições</span>
+              <div className="flex h-9 items-center gap-0.75 rounded-lg border border-[#3D2C24] bg-[#231712] p-0.75">
+                <button
+                  type="button"
+                  aria-label={`Diminuir quantidade de ${item.name}`}
+                  disabled={item.quantity <= 1}
+                  onClick={() => onQuantityChange(item.id, item.quantity - 1)}
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-[#D28A4C] text-[#140D0A] transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Minus className="h-3.5 w-3.5" />
+                </button>
+                <span aria-live="polite" className="min-w-7 text-center text-xs">
+                  {item.quantity}
+                </span>
+                <button
+                  type="button"
+                  aria-label={`Aumentar quantidade de ${item.name}`}
+                  disabled={item.quantity >= item.availableQuantity}
+                  onClick={() => onQuantityChange(item.id, item.quantity + 1)}
+                  className="flex h-5 w-5 items-center justify-center rounded-full bg-[#D28A4C] text-[#140D0A] transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <Plus className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="text-right md:text-left">
+              <span className="block text-[10px] text-[#F5F1EB] md:hidden">Total</span>
+              <span className="text-sm font-bold text-[#D28A4C]">{formatEth(itemTotal)} ETH</span>
+            </div>
+            <button
+              type="button"
+              aria-label={`Remover ${item.name} do carrinho`}
+              onClick={() => onRemove(item.id)}
+              className="justify-self-end text-[#B39463] transition-opacity hover:opacity-70 md:justify-self-start"
+            >
+              <svg
+                width="24"
+                height="24"
+                viewBox="0 0 24 24"
+                fill="none"
+                xmlns="http://www.w3.org/2000/svg"
+                aria-hidden="true"
+              >
+                <path
+                  d="M18.8894 9.55409C18.8894 17.5731 20.0437 21.1979 12.2799 21.1979C4.51515 21.1979 5.69324 17.5731 5.69324 9.55409"
+                  stroke="#B39463"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M20.3653 6.47981H4.21484"
+                  stroke="#B39463"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <path
+                  d="M15.7148 6.47981C15.7148 6.47981 16.2434 2.7141 12.2891 2.7141C8.33578 2.7141 8.86435 6.47981 8.86435 6.47981"
+                  stroke="#B39463"
+                  strokeWidth="1.5"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              </svg>
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  </section>
+);
+
+export default CartItemList;
