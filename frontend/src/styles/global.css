@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+@theme {
+    --font-mono: "Roboto Mono", monospace;
+}
+
 * {
     box-sizing: border-box;
 }
@@ -8,6 +12,7 @@ body {
     margin: 0;
     background-color: #140D0A;
     color: #F5F1EB;
+    font-family: "Roboto Mono", monospace;
 }
 
 .price-range-thumb {

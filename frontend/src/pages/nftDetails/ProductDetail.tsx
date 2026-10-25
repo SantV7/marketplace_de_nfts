@@ -15,6 +15,7 @@ import {
 import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/footer/Footer';
 import Card from '@/components/nftProduct/Card';
+import { addCartItem } from '@/libs/cartStore';
 import { getNftDetailById } from './productDetailData';
 import cosmicBloom from '@/assets/img/nfts/cosmic_bloom.png';
 import brownNft from '@/assets/img/nfts/brown_nft.png';
@@ -73,6 +74,7 @@ const ProductDetailContent = ({ id }: { id: string }) => {
   const navigate = useNavigate();
 
   const nftData = getNftDetailById(id);
+  const [cartError, setCartError] = useState('');
   const [activeCollectionSlide, setActiveCollectionSlide] = useState(0);
   const [selectedStyle, setSelectedStyle] = useState(nftStyles[0]);
   const [selectedEdition, setSelectedEdition] = useState('1/50');
@@ -107,6 +109,42 @@ const ProductDetailContent = ({ id }: { id: string }) => {
 
   const formattedId = String(id).padStart(3, '0');
   const baseImage = nftData.thumbnails[0];
+  const availableQuantityByEdition: Record<string, number> = {
+    '1/1': 1,
+    '1/10': 10,
+    '1/50': 50,
+    ABERTA: 100,
+  };
+  const availableQuantity = availableQuantityByEdition[selectedEdition] ?? 1;
+
+  const handleAddToCart = () => {
+    setCartError('');
+
+    try {
+      const result = addCartItem({
+        nftId: id,
+        name: nftData.name,
+        image: baseImage,
+        price: nftData.price.toFixed(2),
+        edition: selectedEdition,
+        styleId: selectedStyle.id,
+        styleLabel: selectedStyle.label,
+        styleFilter: selectedStyle.filter,
+        quantity,
+        availableQuantity,
+      });
+
+      if (!result.success) {
+        setCartError(result.message);
+        return;
+      }
+
+      void navigate({ to: '/cart' });
+    } catch (error) {
+      console.error('Não foi possível salvar o NFT no carrinho.', error);
+      setCartError('Não foi possível salvar o carrinho neste navegador. Tente novamente.');
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#140D0A]">
@@ -190,7 +228,12 @@ const ProductDetailContent = ({ id }: { id: string }) => {
                     <button
                       key={edition}
                       type="button"
-                      onClick={() => setSelectedEdition(edition)}
+                      onClick={() => {
+                        setSelectedEdition(edition);
+                        setQuantity((currentQuantity) =>
+                          Math.min(currentQuantity, availableQuantityByEdition[edition] ?? 1),
+                        );
+                      }}
                       className={`rounded-[20px] px-4 py-1.5 text-[12px] font-semibold border transition-all cursor-pointer ${
                         selectedEdition === edition
                           ? 'border-[#D28A4C] bg-[#D28A4C] text-[#140D0A]'
@@ -208,15 +251,19 @@ const ProductDetailContent = ({ id }: { id: string }) => {
                   <button
                     type="button"
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    aria-label="Diminuir quantidade"
+                    disabled={quantity <= 1}
                     className="p-3 text-[#D28A4C] hover:text-[#F5F1EB] cursor-pointer"
                   >
                     <Minus className="h-4 w-4" />
                   </button>
-                  <span className="px-3 text-[14px] font-bold text-[#F5F1EB]">{quantity}</span>
+                  <span aria-live="polite" className="px-3 text-[14px] font-bold text-[#F5F1EB]">{quantity}</span>
                   <button
                     type="button"
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="p-3 text-[#D28A4C] hover:text-[#F5F1EB] cursor-pointer"
+                    onClick={() => setQuantity(Math.min(availableQuantity, quantity + 1))}
+                    aria-label={`Aumentar quantidade, máximo ${availableQuantity}`}
+                    disabled={quantity >= availableQuantity}
+                    className="p-3 text-[#D28A4C] hover:text-[#F5F1EB] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <Plus className="h-4 w-4" />
                   </button>
@@ -224,6 +271,7 @@ const ProductDetailContent = ({ id }: { id: string }) => {
 
                 <button
                   type="button"
+                  onClick={handleAddToCart}
                   className="flex-1 h-12 rounded-xl bg-[#D28A4C] px-6 text-[14px] font-bold text-[#140D0A] transition-colors hover:bg-[#E09A5C] cursor-pointer"
                 >
                   COMPRAR
@@ -242,6 +290,11 @@ const ProductDetailContent = ({ id }: { id: string }) => {
                   Favoritar
                 </button>
               </div>
+              {cartError && (
+                <p role="alert" className="mt-3 text-xs text-red-400">
+                  {cartError}
+                </p>
+              )}
 
               <div className="mt-6 space-y-1.5 text-[12px] text-[#CFB28C]">
                 <p><span className="text-[#F5F1EB]">ID do token:</span> #{formattedId}</p>

@@ -29,10 +29,10 @@ const Card = ({ img, nameNft, idNft, price, previousPrice }: NftCardProps) => {
         />
       </div>
       <div className="mt-3 flex flex-col gap-1">
-        <h3 className="truncate text-[15px] font-medium leading-4 text-[#F5F1EB]">
+        <h3 className="truncate text-[15px] font-normal leading-4 text-[#F5F1EB]">
           {nameNft} #{String(idNft).padStart(3, '0')}
         </h3>
-        <p className="flex flex-wrap items-baseline gap-x-2 text-[18px] font-bold leading-4">
+        <p className="flex flex-wrap items-baseline gap-x-2 text-base font-bold leading-4">
           <span className="text-[#D28A4C]">{price} ETH</span>
           {previousPrice && (
             <span className="text-[14px] font-normal text-[#8C7A6B] line-through">{previousPrice} ETH</span>

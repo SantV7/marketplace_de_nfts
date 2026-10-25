@@ -4,6 +4,7 @@ import Footer from '@/components/footer/Footer';
 import Home from '@/pages/home/Home';
 import Products from '@/pages/home/products/Products';
 import ProductDetail from '@/pages/nftDetails/ProductDetail';
+import Cart from '@/pages/cart/Cart';
 
 const rootRoute = createRootRoute();
 
@@ -48,7 +49,7 @@ const learnRoute = createRoute({
 const cartRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/cart',
-  component: () => <Navbar />,
+  component: Cart,
 });
 
 const loginRoute = createRoute({

@@ -1,14 +1,13 @@
 import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useLocation, useNavigate } from '@tanstack/react-router';
 import { Search, ShoppingCart, X } from 'lucide-react';
+import { useCartItems } from '@/libs/cartStore';
 
-interface NavbarProps {
-  badgeCount?: number;
-}
-
-export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
+export const Navbar = () => {
   const [searchValue, setSearchValue] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const cartItems = useCartItems();
+  const badgeCount = cartItems.reduce((count, item) => count + item.quantity, 0);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -109,7 +108,7 @@ export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
   const cartLink = (
     <Link
       to="/cart"
-      aria-label="Carrinho de compras"
+      aria-label={`Carrinho de compras${badgeCount > 0 ? `, ${badgeCount} itens` : ''}`}
       className={`relative flex h-8 w-8 shrink-0 items-center justify-center border-b-2 transition-opacity hover:opacity-80 ${
         isCartActive ? 'border-[#D28A4C] text-[#D28A4C]' : 'border-transparent text-[#F5F1EB]'
       }`}
