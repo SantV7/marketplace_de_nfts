@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router';
 import HeroImgDigitalArt from '../../assets/img/nfts/esmeral_ape.png';
+import { Bitcoin } from 'lucide-react';
 
 const Hero = () => {
   return (
@@ -31,6 +32,7 @@ const Hero = () => {
             className="flex h-12 items-center justify-center rounded-md bg-[#D28A4C] px-9 py-4 text-xs font-bold uppercase text-[#140D0A] transition-colors hover:bg-[#E09A5C]"
           >
             EXPLORAR
+            <Bitcoin size={19} />
           </Link>
         </div>
 

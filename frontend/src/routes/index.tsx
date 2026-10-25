@@ -5,6 +5,7 @@ import Home from '@/pages/home/Home';
 import Products from '@/pages/home/products/Products';
 import ProductDetail from '@/pages/nftDetails/ProductDetail';
 import Cart from '@/pages/cart/Cart';
+import Checkout from '@/pages/payments/Checkout';
 
 const validTabs = ['all', 'new', 'trending'] as const;
 const validSortOrders = ['recent', 'price-asc', 'price-desc'] as const;
@@ -20,6 +21,7 @@ export type CatalogSearch = {
   sort?: (typeof validSortOrders)[number];
   tab?: (typeof validTabs)[number];
   page?: number;
+  coupon?: string;
 };
 
 export const validateCatalogSearch = (search: Record<string, unknown>): CatalogSearch => {
@@ -38,6 +40,7 @@ export const validateCatalogSearch = (search: Record<string, unknown>): CatalogS
   const page = Number(search.page);
   const sort = validSortOrders.find((order) => order === search.sort);
   const tab = validTabs.find((value) => value === search.tab);
+  const coupon = typeof search.coupon === 'string' ? search.coupon.trim().toUpperCase() : '';
 
   return {
     ...(query ? { q: query } : {}),
@@ -48,6 +51,7 @@ export const validateCatalogSearch = (search: Record<string, unknown>): CatalogS
     ...(sort ? { sort } : {}),
     ...(tab ? { tab } : {}),
     ...(Number.isInteger(page) && page > 0 ? { page } : {}),
+    ...(coupon ? { coupon } : {}),
   };
 };
 
@@ -98,6 +102,12 @@ const cartRoute = createRoute({
   component: Cart,
 });
 
+const paymentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/payment',
+  component: Checkout,
+});
+
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
@@ -111,6 +121,7 @@ const routeTree = rootRoute.addChildren([
   creatorsRoute,
   learnRoute,
   cartRoute,
+  paymentRoute,
   loginRoute,
 ]);
 

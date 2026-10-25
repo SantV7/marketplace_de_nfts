@@ -41,18 +41,22 @@ const ProductsContent = ({ search }: { search: CatalogSearch }) => {
   const filteredNfts = useMemo(() => {
     const filtered = nfts.filter((nft) => {
       const query = search.q?.toLocaleLowerCase() ?? '';
+
       const matchesQuery =
         !query ||
         nft.name.toLocaleLowerCase().includes(query) ||
         String(nft.id).includes(query) ||
         String(nft.id).padStart(3, '0').includes(query);
+
       const matchesTab =
         activeTab === 'all' ||
         (activeTab === 'new' && nft.isNew) ||
         (activeTab === 'trending' && nft.isTrending);
       const matchesCategory = !selectedCategory || nft.category === selectedCategory;
+
       const matchesNetwork =
         selectedNetworks.length === 0 || selectedNetworks.includes(nft.network);
+
       const matchesPrice = nft.price >= priceRange.min && nft.price <= priceRange.max;
 
       return matchesQuery && matchesTab && matchesCategory && matchesNetwork && matchesPrice;

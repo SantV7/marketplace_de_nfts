@@ -2,7 +2,7 @@
 
 Frontend de um marketplace de NFTs desenvolvido como parte de um desafio técnico. A homepage está sendo construída incrementalmente para seguir a direção visual do Figma, incluindo navegação, apresentação, descoberta de NFTs, banners editoriais, conteúdo e rodapé.
 
-> **Status:** a interface contém homepage, catálogo e detalhes demonstrativos, com busca e filtros locais sincronizados à URL e carrinho persistido no navegador. Os dados ainda não vêm de API; autenticação, checkout, tempo real, testes E2E e deploy permanecem pendentes. Consulte [Escopo do desafio e status](#escopo-do-desafio-e-status) e os [requisitos completos do teste](./about_test.md).
+> **Status:** o frontend contém homepage, catálogo e detalhes demonstrativos, carrinho persistido no navegador e telas responsivas de carrinho e pagamento. Busca e filtros são locais, com o estado aplicado sincronizado à URL. Carrinho e pagamento mobile foram conferidos visualmente em 390 × 844 px; os demais viewports e telas ainda precisam de validação sistemática. Os dados não vêm de API; autenticação, pedidos, transações, tempo real, testes E2E e deploy permanecem pendentes. Consulte [Escopo do desafio e status](#escopo-do-desafio-e-status).
 
 ## Tecnologias
 
@@ -65,13 +65,22 @@ No estado atual, não há scripts de testes Playwright ou auditoria Lighthouse c
 ### Carrinho
 
 - Rota `/cart` com layout responsivo, breadcrumb, resumo do pedido e recomendações paginadas.
+- No mobile, exibe apenas os itens e o resumo do frame do Figma. O resumo ocupa a largura disponível e encosta nas laterais e no fundo da viewport; em telas curtas, o conteúdo pode rolar.
 - Adição pela página de detalhes; itens agrupados por NFT, edição e estilo, com controles para alterar quantidade e remover.
 - A imagem e a identificação do item refletem o estilo escolhido (Normal, Platinada, Dourada ou Saturada).
 - Carrinho persistido em `localStorage`, restaurado após refresh e sincronizado entre abas do navegador.
 - Contador da navbar reflete a quantidade total de unidades.
 - Quantidades respeitam limites demonstrativos por NFT/edição, compartilhados entre estilos diferentes.
 - Subtotal, desconto, taxa fixa demonstrativa de `0.016 ETH` e total são calculados com unidades inteiras de ETH. O cupom `KURIO10` aplica 10% de desconto local, sem validação de API.
-- A finalização apenas informa que o pagamento não está disponível; nenhum pedido é criado ou confirmado.
+- O botão de finalização leva à rota `/payment` e mantém o cupom aplicado na URL.
+- A composição mobile foi conferida manualmente no navegador em 390 × 844 px; não há baseline ou teste visual automatizado.
+
+### Pagamento
+
+- Rota `/payment` com layouts específicos por viewport: formulário do colecionador e revisão dos NFTs no desktop; carteiras conectadas, seleção de carteira/rede e total no mobile.
+- Validação nativa dos campos obrigatórios no desktop; seletores de carteira/rede são demonstrações visuais e não conectam carteiras.
+- A confirmação valida os dados preenchidos e informa que o fluxo é demonstrativo; não cria pedidos, não conecta carteiras e não envia transações.
+- A composição mobile está implementada, mas ainda precisa de conferência visual nos viewports do teste.
 
 ### Catálogo de demonstração
 
@@ -113,12 +122,19 @@ src/
 │   ├── ProductDetail.tsx       # Página demonstrativa de detalhes do NFT
 │   └── productDetailData.ts    # Dados locais usados na página de detalhes
 ├── pages/cart/
-│   └── Cart.tsx                # Carrinho, resumo, cupom demonstrativo e recomendações
+│   ├── Cart.tsx                # Composição responsiva do carrinho
+│   ├── CartItemList.tsx        # Itens, quantidades e remoção
+│   ├── CartSummary.tsx         # Cupom demonstrativo, totais e CTA
+│   ├── CartRecommendations.tsx # Recomendações paginadas no desktop
+│   └── cartPricing.ts          # Cálculos de ETH com unidades inteiras
+├── pages/payments/
+│   ├── Checkout.tsx            # Composição da tela responsiva de pagamento
+│   ├── CheckoutProfileForm.tsx # Dados do colecionador e validação nativa
+│   ├── CheckoutOrderSummary.tsx # NFTs, valores e opções demonstrativas de carteira
+│   └── paymentData.ts          # Opções locais de redes e carteiras demonstrativas
 ├── routes/index.tsx            # Rotas declaradas com TanStack Router
 └── styles/global.css           # Estilos globais e controles de preço
 ```
-
-Os requisitos completos do desafio estão em [`about_test.md`](./about_test.md).
 
 ## Escopo do desafio e status
 
@@ -126,22 +142,30 @@ O desafio pede uma experiência completa de descoberta, compra e conta do coleci
 
 | Área avaliada | Status atual |
 | --- | --- |
-| Início e identidade visual | Navbar, hero, catálogo, banners, seção editorial e footer compõem a homepage. A fidelidade e responsividade ainda precisam de validação completa contra os frames do Figma. |
-| Descoberta de NFTs | Busca, filtros, abas, ordenação e paginação locais em `/` e `/market`, sincronizados com a URL. Dados e resultados ainda não vêm de API. |
+| Início e identidade visual | Navbar, hero, catálogo, banners, seção editorial e footer compõem a homepage. Falta conferir cada frame e os viewports obrigatórios de 390, 768 e 1440 px. |
+| Descoberta de NFTs | Busca, filtros, abas, ordenação e paginação locais em `/` e `/market`; o estado aplicado é sincronizado com a URL. Dados e resultados ainda não vêm de API. |
 | Detalhes do NFT | Página em `/nft/$id`, com estado para identificador inexistente. Compra adiciona ao carrinho; dados e limites por edição são demonstrativos, e favoritos persistentes não estão implementados. |
-| Carrinho, cotação e cupons | Adicionar, alterar quantidade e remover itens com persistência local; estilo escolhido é refletido na linha e na imagem do NFT. Cupom `KURIO10`, disponibilidade e taxa de rede são demonstrativos. Cotação real, disponibilidade remota, reconciliação com eventos e checkout ainda não estão implementados. |
-| Pagamento e confirmação | Não implementados. |
+| Carrinho, cotação e cupons | Adicionar, alterar quantidade e remover itens com persistência local; cupom `KURIO10`, disponibilidade e taxa de rede são demonstrativos. O layout mobile foi conferido em 390 × 844 px; cotação real e atualização de disponibilidade não existem. |
+| Pagamento e confirmação | Layouts desktop e mobile, validação local do formulário desktop e seleção visual de carteira/rede. O layout mobile foi conferido em 390 × 844 px; a interface informa que não envia pedido. API, conexão, estados de confirmação/recusa e recibo não estão implementados. |
 | Cadastro, login e sessão | Há um link e uma rota inicial de login; autenticação, persistência de sessão e proteção de rotas não foram implementadas. |
 | Perfil e carteiras | Não implementados. |
 | REST, Axios e TanStack Query | Dependências disponíveis; contratos, cliente e integração ainda não implementados. |
 | MSW | Dependências disponíveis; handlers, cenários e reset de mocks ainda não implementados. |
 | Socket.IO | Cliente instalado; eventos, reconexão e sincronização ainda não implementados. |
 | Banners, conteúdo e newsletter | Componentes visuais estão na homepage; navegação editorial, CTAs e redes sociais ainda não têm comportamento funcional. O formulário de newsletter valida o formato, sem envio para serviço. |
-| Acessibilidade e responsividade | Há semântica básica, textos alternativos e estilos responsivos; a validação completa por teclado, leitor de tela, zoom, estados de carregamento e viewports do desafio está pendente. |
-| Playwright e regressão visual | Playwright está instalado, mas ainda não há testes E2E ou baselines versionadas. |
+| Acessibilidade e responsividade | Há semântica básica, textos alternativos e estilos responsivos. Testes sistemáticos de teclado, leitor de tela, zoom, contraste e viewports do desafio estão pendentes. |
+| Playwright e regressão visual | Playwright está instalado, mas não há testes E2E, script de execução ou baselines versionadas. |
 | Lighthouse e deploy | Scripts, relatórios de auditoria e publicação ainda não configurados. |
 
 As outras rotas declaradas em `src/routes/index.tsx` ainda são estruturas iniciais e não representam as telas funcionais descritas no desafio.
+
+### Validação realizada
+
+- `npm run build` — TypeScript e build de produção aprovados.
+- `npm run lint` — ESLint aprovado.
+- Conferência visual manual do carrinho e do pagamento mobile em 390 × 844 px; ambos sem overflow horizontal nessa largura. Não foram criadas baselines nem executados testes E2E.
+
+**Risco para a avaliação:** o enunciado considera eliminatórios os fluxos principais apenas visuais e a ausência de testes E2E executáveis. Como pedidos, autenticação e integrações simuladas ainda não estão implementados, o projeto ainda não atende ao desafio completo, apesar das telas de carrinho e pagamento funcionais localmente.
 
 ## Próximas etapas recomendadas
 
@@ -149,7 +173,7 @@ As outras rotas declaradas em `src/routes/index.tsx` ainda são estruturas inici
 2. Migrar catálogo e detalhes locais para consultas tipadas com TanStack Query; sincronizar busca, filtros, ordenação e paginação com a URL.
 3. Migrar filtros, estados de carregamento/erro/vazio e paginação do catálogo para consultas à API.
 4. Completar favoritos persistentes, disponibilidade e validação de edições/quantidade no detalhe.
-5. Substituir o estado local do carrinho por contratos REST/MSW e implementar cotação, checkout, idempotência e recibo.
+5. Integrar formulário e carrinho a contratos REST/MSW; implementar cotação, pedidos idempotentes, estados pendentes/confirmados/recusados e recibo.
 6. Implementar cadastro, autenticação, sessão, perfil e carteiras.
 7. Integrar eventos Socket.IO e cenários de reconexão.
 8. Conectar CTAs, conteúdo e newsletter a destinos ou operações reais, sem exibir sucesso falso.
