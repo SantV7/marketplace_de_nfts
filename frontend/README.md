@@ -48,6 +48,7 @@ No estado atual, não há scripts de testes Playwright ou auditoria Lighthouse c
 
 - Navbar com marca KURIO, links, busca expansível, contador de itens do carrinho e acesso visual ao login.
 - Hero responsivo com texto, arte principal e botão que navega para `/market`.
+- No mobile, busca de coleções, atalho de filtros, hero compacto com artes sobrepostas, catálogo em duas colunas e navbar inferior flutuante.
 - Seção de produtos com filtros laterais à esquerda e catálogo à direita em telas grandes.
 - A rota `/market` reutiliza o catálogo de produtos e o footer, em vez de exibir somente o navbar.
 - Banners de destaque com imagens, textos e botões de exploração.
@@ -83,6 +84,12 @@ No estado atual, não há scripts de testes Playwright ou auditoria Lighthouse c
 - A prévia usa um identificador `DEMO-`, não remove os itens do carrinho e avisa que não cria pedido real, não conecta carteira nem envia transação. O botão abre a página inicial do Etherscan, não um link de transação.
 - A composição mobile está implementada, mas ainda precisa de conferência visual nos viewports do teste.
 
+### Login e cadastro
+
+- As rotas `/login` e `/register` mostram modal sobre a home no desktop e telas dedicadas no mobile; é possível alternar entre os formulários.
+- Validação local de e-mail, senha (mínimo de 8 caracteres com maiúscula, minúscula e número), nome de usuário e confirmação de senha.
+- Google/Facebook, recuperação de senha e envio das credenciais informam que ainda não há integração e não autenticam o usuário.
+
 ### Catálogo de demonstração
 
 - Cards reutilizáveis com imagem, nome, identificador e preço em ETH.
@@ -114,6 +121,7 @@ src/
 ├── pages/home/
 │   ├── Home.tsx                # Composição da página inicial
 │   ├── Hero.tsx                # Hero da homepage
+│   ├── MobileHomeNavbar.tsx    # Navegação fixa mobile
 │   └── products/
 │       ├── Products.tsx        # Estado e composição da seção de produtos
 │       ├── ProductSidebar.tsx  # Categorias, preço, redes e destaque
@@ -136,6 +144,8 @@ src/
 │   ├── DemoOrderConfirmation.tsx # Rota e estado de sessão da prévia de recibo
 │   ├── demoReceipt.ts          # Criação e persistência temporária do recibo
 │   └── paymentData.ts          # Opções locais de redes e carteiras demonstrativas
+├── pages/auth/
+│   └── Auth.tsx                # Formulários responsivos de login e cadastro
 ├── routes/index.tsx            # Rotas declaradas com TanStack Router
 └── styles/global.css           # Estilos globais e controles de preço
 ```
@@ -146,12 +156,12 @@ O desafio pede uma experiência completa de descoberta, compra e conta do coleci
 
 | Área avaliada | Status atual |
 | --- | --- |
-| Início e identidade visual | Navbar, hero, catálogo, banners, seção editorial e footer compõem a homepage. Falta conferir cada frame e os viewports obrigatórios de 390, 768 e 1440 px. |
+| Início e identidade visual | Navbar, hero, catálogo, banners, seção editorial e footer compõem a homepage. O layout mobile de início foi conferido em 390 × 844 px; ainda falta validar todos os frames e viewports do desafio. |
 | Descoberta de NFTs | Busca, filtros, abas, ordenação e paginação locais em `/` e `/market`; o estado aplicado é sincronizado com a URL. Dados e resultados ainda não vêm de API. |
 | Detalhes do NFT | Página em `/nft/$id`, com estado para identificador inexistente. Compra adiciona ao carrinho; dados e limites por edição são demonstrativos, e favoritos persistentes não estão implementados. |
 | Carrinho, cotação e cupons | Adicionar, alterar quantidade e remover itens com persistência local; cupom `KURIO10`, disponibilidade e taxa de rede são demonstrativos. O layout mobile foi conferido em 390 × 844 px; cotação real e atualização de disponibilidade não existem. |
 | Pagamento e confirmação | Layouts desktop/mobile e recibo demonstrativo calculado dos itens, valores e carteira selecionada. Identificador prefixado com `DEMO-`; nenhuma transação real é enviada. Ainda faltam API, pedido idempotente, conexão, estados reais de confirmação/recusa e recibo imutável do servidor. |
-| Cadastro, login e sessão | Há um link e uma rota inicial de login; autenticação, persistência de sessão e proteção de rotas não foram implementadas. |
+| Cadastro, login e sessão | Formulários de login/cadastro responsivos com validação local de e-mail e senha. Autenticação, persistência de sessão e proteção de rotas não foram implementadas. |
 | Perfil e carteiras | Não implementados. |
 | REST, Axios e TanStack Query | Dependências disponíveis; contratos, cliente e integração ainda não implementados. |
 | MSW | Dependências disponíveis; handlers, cenários e reset de mocks ainda não implementados. |

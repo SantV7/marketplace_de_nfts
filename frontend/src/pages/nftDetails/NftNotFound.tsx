@@ -12,7 +12,9 @@ const NftNotFound = ({ id }: NftNotFoundProps) => {
 
   return (
     <div className="min-h-screen bg-[#140D0A] flex flex-col justify-between font-mono">
-      <Navbar />
+      <div className="hidden md:block">
+        <Navbar />
+      </div>
       <div className="mx-auto max-w-md px-4 py-20 text-center text-[#F5F1EB]">
         <div className="flex justify-center mb-4 text-[#D28A4C]">
           <AlertCircle className="h-16 w-16" />

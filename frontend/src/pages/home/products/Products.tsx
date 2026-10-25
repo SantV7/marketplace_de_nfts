@@ -8,13 +8,36 @@ import { router, type CatalogSearch } from '@/routes';
 const pageSize = 9;
 const emptyNetworks: string[] = [];
 
-const Products = () => {
+interface ProductsProps {
+  mobileFiltersOpen?: boolean;
+  onMobileFiltersClose?: () => void;
+}
+
+const Products = ({
+  mobileFiltersOpen = false,
+  onMobileFiltersClose,
+}: ProductsProps) => {
   const search = useRouterState({ select: (state) => state.location.search });
 
-  return <ProductsContent key={JSON.stringify(search)} search={search} />;
+  return (
+    <ProductsContent
+      key={JSON.stringify(search)}
+      search={search}
+      mobileFiltersOpen={mobileFiltersOpen}
+      onMobileFiltersClose={onMobileFiltersClose}
+    />
+  );
 };
 
-const ProductsContent = ({ search }: { search: CatalogSearch }) => {
+const ProductsContent = ({
+  search,
+  mobileFiltersOpen,
+  onMobileFiltersClose,
+}: {
+  search: CatalogSearch;
+  mobileFiltersOpen: boolean;
+  onMobileFiltersClose?: () => void;
+}) => {
   const location = useLocation();
   const updateSearch = (updater: (previous: CatalogSearch) => CatalogSearch) => {
     if (location.pathname === '/market') {
@@ -92,9 +115,11 @@ const ProductsContent = ({ search }: { search: CatalogSearch }) => {
   return (
     <section
       aria-label="Explorar NFTs"
-      className="mx-auto grid w-full max-w-360 grid-cols-1 items-start gap-6 px-4 pb-16 font-mono sm:px-6 md:grid-cols-[270px_minmax(0,1fr)] md:gap-10 lg:px-27.5"
+      className="mx-auto grid w-full max-w-360 grid-cols-1 items-start gap-5 px-6 pb-28 pt-4 font-mono md:grid-cols-[270px_minmax(0,1fr)] md:gap-10 md:px-6 md:pb-16 md:pt-0 lg:px-27.5"
     >
       <ProductSidebar
+        mobileOpen={mobileFiltersOpen}
+        onMobileClose={onMobileFiltersClose}
         selectedCategory={selectedCategory}
         selectedNetworks={selectedNetworks}
         draftPriceRange={draftPriceRange}

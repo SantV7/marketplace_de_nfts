@@ -1,12 +1,14 @@
+import { lazy, Suspense } from 'react';
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import Navbar from '@/components/navbar/Navbar';
-import Footer from '@/components/footer/Footer';
 import Home from '@/pages/home/Home';
-import Products from '@/pages/home/products/Products';
+import Market from '@/pages/home/Market';
 import ProductDetail from '@/pages/nftDetails/ProductDetail';
 import Cart from '@/pages/cart/Cart';
 import Checkout from '@/pages/payments/Checkout';
 import DemoOrderConfirmation from '@/pages/payments/DemoOrderConfirmation';
+
+const Auth = lazy(() => import('@/pages/auth/Auth'));
 
 const validTabs = ['all', 'new', 'trending'] as const;
 const validSortOrders = ['recent', 'price-asc', 'price-desc'] as const;
@@ -24,6 +26,8 @@ export type CatalogSearch = {
   page?: number;
   coupon?: string;
 };
+
+
 
 export const validateCatalogSearch = (search: Record<string, unknown>): CatalogSearch => {
   const query = typeof search.q === 'string' ? search.q.trim() : '';
@@ -76,13 +80,7 @@ const marketRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/market',
   validateSearch: validateCatalogSearch,
-  component: () => (
-    <main className="min-h-screen bg-[#140D0A]">
-      <Navbar />
-      <Products />
-      <Footer />
-    </main>
-  ),
+  component: Market,
 });
 
 const creatorsRoute = createRoute({
@@ -118,7 +116,21 @@ const orderConfirmationRoute = createRoute({
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/login',
-  component: () => <Navbar />,
+  component: () => (
+    <Suspense fallback={<div className="min-h-svh bg-[#140D0A]" />}>
+      <Auth />
+    </Suspense>
+  ),
+});
+
+const registerRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/register',
+  component: () => (
+    <Suspense fallback={<div className="min-h-svh bg-[#140D0A]" />}>
+      <Auth />
+    </Suspense>
+  ),
 });
 
 const routeTree = rootRoute.addChildren([
@@ -131,6 +143,7 @@ const routeTree = rootRoute.addChildren([
   paymentRoute,
   orderConfirmationRoute,
   loginRoute,
+  registerRoute,
 ]);
 
 export const router = createRouter({ routeTree });

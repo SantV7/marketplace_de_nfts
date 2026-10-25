@@ -10,6 +10,7 @@ import {
 } from './productDetailContent';
 import NftDetailsTabs from './NftDetailsTabs';
 import NftGallery from './NftGallery';
+import NftMobileDetail from './NftMobileDetail';
 import NftNotFound from './NftNotFound';
 import NftPurchasePanel from './NftPurchasePanel';
 import RelatedNfts from './RelatedNfts';
@@ -73,49 +74,68 @@ const ProductDetailContent = ({ id }: { id: string }) => {
 
   return (
     <div className="min-h-screen bg-[#140D0A]">
-      <Navbar />
-
-      <div className="mx-auto max-w-360 px-4 pt-6 pb-16 font-mono text-[#F5F1EB] lg:px-27.5">
-        <nav className="mb-6 text-xs leading-4 text-[#CFB28C]">
-          <span>Início</span> / <span>Mercado</span> /{' '}
-          <span className="text-[#D28A4C]">{nftData.name} #{formattedId}</span>
-        </nav>
-
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
-          <NftGallery
-            baseImage={baseImage}
-            nftName={nftData.name}
-            selectedStyle={selectedStyle}
-            isModalOpen={isModalOpen}
-            onSelectStyle={setSelectedStyle}
-            onModalOpenChange={setIsModalOpen}
-          />
-          <NftPurchasePanel
-            nftData={nftData}
-            formattedId={formattedId}
-            selectedStyle={selectedStyle}
-            selectedEdition={selectedEdition}
-            quantity={quantity}
-            availableQuantity={availableQuantity}
-            isFavorite={isFavorite}
-            cartError={cartError}
-            onSelectEdition={handleSelectEdition}
-            onQuantityChange={setQuantity}
-            onAddToCart={handleAddToCart}
-            onToggleFavorite={() => setIsFavorite(!isFavorite)}
-          />
-        </div>
-
-        <NftDetailsTabs
-          nftData={nftData}
-          formattedId={formattedId}
-          styleLabel={selectedStyle.label}
-          selectedEdition={selectedEdition}
-        />
-        <RelatedNfts />
+      <div className="hidden md:block">
+        <Navbar />
       </div>
 
-      <Footer />
+      <NftMobileDetail
+        nftData={nftData}
+        formattedId={formattedId}
+        baseImage={baseImage}
+        selectedStyle={selectedStyle}
+        selectedEdition={selectedEdition}
+        quantity={quantity}
+        availableQuantity={availableQuantity}
+        isFavorite={isFavorite}
+        cartError={cartError}
+        onSelectEdition={handleSelectEdition}
+        onQuantityChange={setQuantity}
+        onAddToCart={handleAddToCart}
+        onToggleFavorite={() => setIsFavorite(!isFavorite)}
+      />
+
+      <div className="hidden md:block">
+        <div className="mx-auto max-w-360 px-4 pt-6 pb-16 font-mono text-[#F5F1EB] lg:px-27.5">
+          <nav className="mb-6 text-xs leading-4 text-[#CFB28C]">
+            <span>Início</span> / <span>Mercado</span> /{' '}
+            <span className="text-[#D28A4C]">{nftData.name} #{formattedId}</span>
+          </nav>
+
+          <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+            <NftGallery
+              baseImage={baseImage}
+              nftName={nftData.name}
+              selectedStyle={selectedStyle}
+              isModalOpen={isModalOpen}
+              onSelectStyle={setSelectedStyle}
+              onModalOpenChange={setIsModalOpen}
+            />
+            <NftPurchasePanel
+              nftData={nftData}
+              formattedId={formattedId}
+              selectedStyle={selectedStyle}
+              selectedEdition={selectedEdition}
+              quantity={quantity}
+              availableQuantity={availableQuantity}
+              isFavorite={isFavorite}
+              cartError={cartError}
+              onSelectEdition={handleSelectEdition}
+              onQuantityChange={setQuantity}
+              onAddToCart={handleAddToCart}
+              onToggleFavorite={() => setIsFavorite(!isFavorite)}
+            />
+          </div>
+
+          <NftDetailsTabs
+            nftData={nftData}
+            formattedId={formattedId}
+            styleLabel={selectedStyle.label}
+            selectedEdition={selectedEdition}
+          />
+          <RelatedNfts />
+        </div>
+        <Footer />
+      </div>
     </div>
   );
 };

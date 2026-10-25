@@ -38,9 +38,9 @@ const ProductCatalog = ({
 
   return (
     <div className="min-w-0 font-mono">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <div
-          className="flex flex-wrap items-center gap-x-6 gap-y-2"
+          className="flex w-full flex-nowrap items-center justify-between gap-x-3 overflow-x-auto md:w-auto md:justify-start md:gap-x-6"
           role="tablist"
           aria-label="Tipo de listagem"
         >
@@ -51,19 +51,19 @@ const ProductCatalog = ({
               role="tab"
               aria-selected={activeTab === id}
               onClick={() => onTabChange(id)}
-              className={`flex items-center gap-2 border-b-2 pb-1 text-[15px] font-medium leading-4 transition-colors cursor-pointer ${
+              className={`flex shrink-0 items-center gap-2 border-b-2 pb-1 text-[13px] font-medium leading-4 transition-colors cursor-pointer md:text-[15px] ${
                 activeTab === id
                   ? 'border-[#D28A4C] font-bold text-[#D28A4C]'
                   : 'border-transparent text-[#F5F1EB] hover:text-[#D28A4C]'
               }`}
             >
-              {getTabIcon(id)}
+              <span className="hidden md:inline-flex">{getTabIcon(id)}</span>
               {label}
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2 text-xs text-[#CFB28C]">
+        <div className="hidden items-center gap-2 text-xs text-[#CFB28C] md:flex">
           <span className="flex items-center gap-1.5 whitespace-nowrap text-[15px] font-medium leading-4 text-[#F5F1EB]">
             <SlidersHorizontal className="h-3.5 w-3.5 text-[#D28A4C]" />
             Ordenar por:
@@ -91,7 +91,7 @@ const ProductCatalog = ({
       </div>
 
       {products.length > 0 ? (
-        <div className="grid grid-cols-1 gap-x-6 gap-y-8 min-[520px]:grid-cols-2 xl:grid-cols-3">
+        <div className="grid grid-cols-2 gap-x-4 gap-y-8 min-[520px]:gap-x-6 [&>article:nth-child(even)]:translate-y-8 md:[&>article:nth-child(even)]:translate-y-0 xl:grid-cols-3">
           {products.map((nft) => (
             <Card
               key={nft.id}
