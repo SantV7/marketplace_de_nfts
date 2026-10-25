@@ -53,7 +53,7 @@ const Products = () => {
   return (
     <section
       aria-label="Explorar NFTs"
-      className="mx-auto grid w-full max-w-[1440px] grid-cols-1 items-start gap-6 px-4 pb-16 font-mono sm:px-6 lg:grid-cols-[270px_minmax(0,1fr)] lg:gap-10 lg:px-10"
+      className="mx-auto grid w-full max-w-360 grid-cols-1 items-start gap-6 px-4 pb-16 font-mono sm:px-6 lg:grid-cols-[270px_minmax(0,1fr)] lg:gap-10 lg:px-10"
     >
       <ProductSidebar
         selectedCategory={selectedCategory}

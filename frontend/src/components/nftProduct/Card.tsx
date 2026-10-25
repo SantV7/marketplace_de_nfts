@@ -1,3 +1,5 @@
+import { useNavigate } from '@tanstack/react-router';
+
 interface NftCardProps {
   img: string;
   nameNft: string;
@@ -7,8 +9,18 @@ interface NftCardProps {
 }
 
 const Card = ({ img, nameNft, idNft, price, previousPrice }: NftCardProps) => {
+  const navigate = useNavigate();
+
+  const handleCardClick = () => {
+    // Redireciona para a página de detalhes usando o ID correto do NFT
+    navigate({ to: '/nft/$id', params: { id: String(idNft) } });
+  };
+
   return (
-    <article className="group min-w-0 font-mono cursor-pointer transition-all duration-300">
+    <article
+      onClick={handleCardClick}
+      className="group min-w-0 font-mono cursor-pointer transition-all duration-300"
+    >
       <div className="bg-[#231712] p-1.5 rounded-xl border border-transparent transition-all duration-200 hover:border-sky-300">
         <img
           src={img}

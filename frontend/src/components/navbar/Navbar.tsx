@@ -20,7 +20,8 @@ export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
     currentPath.startsWith('/register') ||
     currentPath.startsWith('/profile') ||
     currentPath.startsWith('/wallets');
-  const isMarketActive = currentPath.startsWith('/market');
+  const isMarketActive =
+    currentPath.startsWith('/market') || currentPath.startsWith('/nft/');
   const isCreatorsActive = currentPath.startsWith('/creators');
   const isLearnActive = currentPath.startsWith('/learn');
   const isCartActive = currentPath.startsWith('/cart');
@@ -55,6 +56,7 @@ export const Navbar = ({ badgeCount = 1 }: NavbarProps) => {
     <div key={to} className="relative flex h-full shrink-0 items-center">
       <Link
         to={to}
+        aria-current={active ? 'page' : undefined}
         className={`whitespace-nowrap text-[13px] transition-opacity hover:opacity-80 max-[700px]:text-[10px] max-[420px]:text-[8px] ${
           active ? 'font-semibold text-[#D28A4C]' : 'font-normal text-[#F5F1EB]'
         }`}

@@ -1,6 +1,9 @@
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import Navbar from '@/components/navbar/Navbar';
+import Footer from '@/components/footer/Footer';
 import Home from '@/pages/home/Home';
+import Products from '@/pages/home/products/Products';
+import ProductDetail from '@/pages/nftDetails/ProductDetail';
 
 const rootRoute = createRootRoute();
 
@@ -10,12 +13,24 @@ const indexRoute = createRoute({
   component: () => <Home />,
 });
 
+const nftDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/nft/$id',
+  component: () => <ProductDetail />,
+});
+
 const marketRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/market',
   validateSearch: (search: Record<string, unknown>): { q?: string } =>
     typeof search.q === 'string' ? { q: search.q } : {},
-  component: () => <Navbar />,
+  component: () => (
+    <main className="min-h-screen bg-[#140D0A]">
+      <Navbar />
+      <Products />
+      <Footer />
+    </main>
+  ),
 });
 
 const creatorsRoute = createRoute({
@@ -44,6 +59,7 @@ const loginRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  nftDetailRoute,
   marketRoute,
   creatorsRoute,
   learnRoute,
