@@ -8,7 +8,7 @@ import { queryKeys } from '@/services/queries';
 const AuthPanel = ({ children }: { children: ReactNode }) => <div className="w-full">{children}</div>;
 const AuthDialog = ({ children, onClose, title }: { children: ReactNode; onClose: () => void; title: string }) => (
   <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#0C0705]/45 px-5 py-8 font-mono" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-    <section role="dialog" aria-modal="true" aria-label={title} className="relative flex min-h-[600px] max-h-[calc(100svh-48px)] w-full max-w-[500px] flex-col overflow-y-auto border-b-[10px] border-[#D28A4C] bg-[#241612] px-8 pb-12 pt-10 sm:px-12">
+    <section role="dialog" aria-modal="true" aria-label={title} className="relative flex min-h-150 max-h-[calc(100svh-48px)] w-full max-w-125 flex-col overflow-y-auto border-b-10px border-[#D28A4C] bg-[#241612] px-8 pb-12 pt-10 sm:px-12">
       <button type="button" onClick={onClose} aria-label="Fechar" className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center text-[#D28A4C] hover:text-[#F5F1EB]">×</button>
       {children}
     </section>
@@ -219,7 +219,7 @@ const Auth = () => {
         </button>
       </div>
 
-      <p className="mx-auto mb-6 max-w-[410px] text-center text-[13px] leading-4 text-[#F5F1EB]">
+      <p className="mx-auto mb-6 max-w-102.5 text-center text-[13px] leading-4 text-[#F5F1EB]">
         {isRegister
           ? 'Crie seu perfil de colecionador e conecte uma carteira quando quiser.'
           : 'Entre para gerenciar sua carteira, coleção e perfil de criador.'}
@@ -290,7 +290,7 @@ const Auth = () => {
 
         <button
           type="submit"
-          className="flex h-[45px] w-full items-center justify-center rounded-[5px] bg-[#D28A4C] text-sm font-bold text-[#140D0A] transition-colors hover:bg-[#E09A5C]"
+          className="flex h-11.25 w-full items-center justify-center rounded-[5px] bg-[#D28A4C] text-sm font-bold text-[#140D0A] transition-colors hover:bg-[#E09A5C]"
         >
           {isRegister ? (
             <>
@@ -384,7 +384,7 @@ const AuthInput = ({
 }) => (
   <div>
     <div
-      className={`flex min-h-[40px] items-center rounded-[5px] border bg-transparent ${
+      className={`flex min-h-10 items-center rounded-[5px] border bg-transparent ${
         error ? 'border-red-400' : 'border-[#3D2C24]'
       }`}
     >
