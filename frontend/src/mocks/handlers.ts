@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw';
-import { disconnectMockRealtime, emitMockRealtime, emitMockRealtimeForTest, getMockRealtimeSubscriptions, realtimeHandlers } from './realtime';
+import { broadcastNftUpdate, disconnectMockRealtime, emitMockRealtime, emitMockRealtimeForTest, getMockRealtimeSubscriptions, realtimeHandlers } from './realtime';
 import { hashMockPassword, idempotentOrders, mockFavorites, mockNfts, mockProfiles, mockSessions, mockUserCarts, mockUsers, mockWallets, persistMockState, resetMockState, type MockCartItem } from './fixtures';
 
 const apiError = (message: string, status: number) => HttpResponse.json({ message }, { status });
@@ -23,6 +23,7 @@ const userFor = (request: Request) => getUser(request);
 const cartOwner = (request: Request) => {
   const user = userFor(request);
   if (user) return user.id;
+  if (request.headers.has('authorization')) return undefined;
   const guestId = request.headers.get('x-guest-id');
   return guestId && /^[\w-]{16,80}$/.test(guestId) ? `guest:${guestId}` : undefined;
 };
@@ -32,12 +33,42 @@ const cartFor = (userId: string) => {
   return cart;
 };
 const save = () => persistMockState();
+const refreshCarts = () => {
+  for (const cart of mockUserCarts.values()) for (const item of cart) {
+    const nft = mockNfts.find((entry) => String(entry.id) === item.nftId);
+    if (nft) { item.price = nft.price; item.availableQuantity = editionAvailability(nft.id, item.edition); }
+  }
+};
+const completePurchase = (userId: string, items: MockCartItem[]) => {
+  const purchased = new Map(items.map((item) => [item.id, item.quantity]));
+  mockUserCarts.set(userId, cartFor(userId).flatMap((item) => {
+    const quantity = item.quantity - (purchased.get(item.id) ?? 0);
+    return quantity > 0 ? [{ ...item, quantity }] : [];
+  }));
+  for (const item of items) {
+    const nft = mockNfts.find((entry) => String(entry.id) === item.nftId);
+    if (!nft) continue;
+    nft.available = Math.max(0, nft.available - item.quantity);
+    const edition = nft.editions?.find((entry) => entry.name === item.edition);
+    if (edition) edition.available = Math.max(0, edition.available - item.quantity);
+    nft.version = (nft.version ?? 1) + 1;
+    broadcastNftUpdate({ id: nft.id, price: nft.price, available: nft.available, editions: nft.editions, version: nft.version });
+  }
+  refreshCarts();
+};
+const validCart = (items: MockCartItem[]) => items.every((item) => {
+  const nft = mockNfts.find((entry) => String(entry.id) === item.nftId);
+  const sameNft = items.filter((row) => row.nftId === item.nftId);
+  return nft && item.price === nft.price && Number.isInteger(item.quantity) && item.quantity > 0
+    && sameNft.reduce((sum, row) => sum + row.quantity, 0) <= nft.available
+    && sameNft.filter((row) => row.edition === item.edition).reduce((sum, row) => sum + row.quantity, 0) <= editionAvailability(nft.id, item.edition);
+});
 const editionAvailability = (nftId: number, edition: string) => {
   const nft = mockNfts.find((item) => item.id === nftId);
   const selected = nft && 'editions' in nft && Array.isArray(nft.editions)
     ? nft.editions.find((item) => item.name === edition)
     : undefined;
-  return selected?.available ?? nft?.available ?? 0;
+  return Math.min(nft?.available ?? 0, selected?.available ?? (nft?.edition === edition ? nft.available : 0));
 };
 const timedOutOrderKeys = new Set<string>();
 const favoriteFailureConsumed = new Set<string>();
@@ -65,6 +96,7 @@ export const handlers = [
     const scenario = await requestDelay(request);
     if (scenario === 'offline') return HttpResponse.error();
     if (scenario === 'server-error') return apiError('Falha transitória simulada', 503);
+    if (scenario === 'forbidden') return apiError('Sem permissão para este recurso', 403);
     const url = new URL(request.url);
     const search = url.searchParams.get('search') ?? '';
     const category = url.searchParams.get('category');
@@ -85,7 +117,10 @@ export const handlers = [
     if (scenario === 'empty') rows = [];
     return HttpResponse.json({ data: rows.slice((page - 1) * limit, page * limit).map((nft) => ({ ...nft, version: nft.version ?? 1 })), total: scenario === 'empty' ? 0 : total, page, pageCount: Math.ceil(total / limit) });
   }),
-  http.get('/api/nfts/:id', ({ params }) => {
+  http.get('/api/nfts/:id', async ({ request, params }) => {
+    const scenario = await requestDelay(request);
+    if (scenario === 'offline') return HttpResponse.error();
+    if (scenario === 'server-error') return apiError('Falha transitória simulada', 503);
     const nft = mockNfts.find((item) => String(item.id) === params.id);
     return nft ? HttpResponse.json({ ...nft, version: nft.version ?? 1 }) : apiError('NFT não encontrado', 404);
   }),
@@ -116,19 +151,26 @@ export const handlers = [
     await save();
     return HttpResponse.json({ ids: [...favorites] });
   }),
-  http.get('/api/cart', ({ request }) => {
+  http.get('/api/cart', async ({ request }) => {
+    const scenario = await requestDelay(request);
+    if (scenario === 'server-error') return apiError('Falha transitória simulada', 503);
+    if (scenario === 'offline') return HttpResponse.error();
+    refreshCarts();
     const owner = cartOwner(request);
-    if (!owner) return apiError('Identificação do carrinho necessária', 400);
+    if (!owner) return apiError('Identificação do carrinho ou sessão inválida', request.headers.has('authorization') ? 401 : 400);
     return HttpResponse.json({ items: cartFor(owner) });
   }),
   http.post('/api/cart/items', async ({ request }) => {
     const owner = cartOwner(request);
-    if (!owner) return apiError('Identificação do carrinho necessária', 400);
+    if (!owner) return apiError('Identificação do carrinho ou sessão inválida', request.headers.has('authorization') ? 401 : 400);
     const item = await request.json() as Omit<MockCartItem, 'id'>;
     const cart = cartFor(owner);
     const nftId = Number(item.nftId);
+    const nft = mockNfts.find((entry) => entry.id === nftId);
+    if (!nft) return apiError('NFT não encontrado', 404);
+    item.name = nft.name; item.image = nft.image; item.price = nft.price;
     const availability = editionAvailability(nftId, item.edition);
-    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > availability) return apiError('Disponibilidade insuficiente', 409);
+    if (!Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity + cart.filter((row) => row.nftId === item.nftId && row.edition === item.edition).reduce((sum, row) => sum + row.quantity, 0) > availability || item.quantity + cart.filter((row) => row.nftId === item.nftId).reduce((sum, row) => sum + row.quantity, 0) > nft.available) return apiError('Disponibilidade insuficiente', 409);
     const existing = cart.find((row) => row.nftId === item.nftId && row.edition === item.edition && (row.styleId ?? 'normal') === (item.styleId ?? 'normal'));
     if (existing) {
       if (existing.quantity + item.quantity > availability) return apiError('Disponibilidade insuficiente', 409);
@@ -140,19 +182,19 @@ export const handlers = [
   }),
   http.patch('/api/cart/items/:id', async ({ request, params }) => {
     const owner = cartOwner(request);
-    if (!owner) return apiError('Identificação do carrinho necessária', 400);
+    if (!owner) return apiError('Identificação do carrinho ou sessão inválida', request.headers.has('authorization') ? 401 : 400);
     const cart = cartFor(owner);
     const item = cart.find((row) => row.id === params.id);
     if (!item) return apiError('Item não encontrado', 404);
     const body = await request.json() as { quantity: number };
-    if (!Number.isInteger(body.quantity) || body.quantity < 1 || body.quantity > editionAvailability(Number(item.nftId), item.edition)) return apiError('Disponibilidade insuficiente', 409);
+    if (!validCart(cart.map((row) => row.id === item.id ? { ...row, quantity: body.quantity } : row))) return apiError('Disponibilidade insuficiente', 409);
     item.quantity = body.quantity;
     await save();
     return HttpResponse.json({ items: cart });
   }),
   http.delete('/api/cart/items/:id', async ({ request, params }) => {
     const owner = cartOwner(request);
-    if (!owner) return apiError('Identificação do carrinho necessária', 400);
+    if (!owner) return apiError('Identificação do carrinho ou sessão inválida', request.headers.has('authorization') ? 401 : 400);
     const cart = cartFor(owner);
     const index = cart.findIndex((row) => row.id === params.id);
     if (index < 0) return apiError('Item não encontrado', 404);
@@ -168,6 +210,7 @@ export const handlers = [
     const guestOwner = `guest:${guestId}`;
     const guestCart = cartFor(guestOwner);
     const userCart = cartFor(user.id);
+    if (!validCart([...userCart, ...guestCart])) return apiError('Não foi possível mesclar: disponibilidade insuficiente.', 409);
     for (const guestItem of guestCart) {
       const available = editionAvailability(Number(guestItem.nftId), guestItem.edition);
       const existing = userCart.find((item) => item.nftId === guestItem.nftId && item.edition === guestItem.edition && (item.styleId ?? 'normal') === (guestItem.styleId ?? 'normal'));
@@ -183,14 +226,18 @@ export const handlers = [
     return HttpResponse.json({ items: userCart });
   }),
   http.post('/api/quotes', async ({ request }) => {
+    const scenario = await requestDelay(request);
+    if (scenario === 'server-error' || scenario === 'quote-error') return apiError('Falha transitória na cotação', 503);
+    if (scenario === 'offline') return HttpResponse.error();
     const owner = cartOwner(request);
-    if (!owner) return apiError('Identificação do carrinho necessária', 400);
+    if (!owner) return apiError('Identificação do carrinho ou sessão inválida', request.headers.has('authorization') ? 401 : 400);
     const body = await request.json() as { coupon?: string };
     const cart = cartFor(owner);
+    if (!validCart(cart)) return apiError('Preço ou disponibilidade alterados. Revise o carrinho.', 409);
     for (const item of cart) {
       const nft = mockNfts.find((entry) => String(entry.id) === item.nftId);
       if (!nft || nft.price !== item.price || item.quantity > editionAvailability(Number(item.nftId), item.edition)) {
-        return apiError('PreÃ§o ou disponibilidade alterados. Atualize o carrinho antes de cotar.', 409);
+        return apiError('Preço ou disponibilidade alterados. Atualize o carrinho antes de cotar.', 409);
       }
     }
     const subtotal = cart.reduce((sum, item) => sum + toUnits(item.price) * BigInt(item.quantity), 0n);
@@ -207,8 +254,10 @@ export const handlers = [
   }),
   http.post('/api/auth/register', async ({ request }) => {
     const body = await request.json() as { email: string; username: string; password: string; name?: string };
+    if (typeof body.email !== 'string' || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email) || typeof body.username !== 'string' || !/^[\w.-]{3,24}$/.test(body.username) || typeof body.password !== 'string' || body.password.length < 8) return apiError('Dados de cadastro inválidos', 422);
+    body.email = body.email.trim().toLowerCase();
     if (mockUsers.some((user) => user.email === body.email || user.username === body.username)) return apiError('E-mail ou usuário já cadastrado', 409);
-    const user = { id: `usr_${Date.now()}`, email: body.email, username: body.username, name: body.name ?? body.username, passwordHash: await hashMockPassword(body.password) };
+    const user = { id: `usr_${crypto.randomUUID()}`, email: body.email, username: body.username, name: body.name ?? body.username, passwordHash: await hashMockPassword(body.password) };
     mockUsers.push(user);
     const token = `mock-${user.id}`;
     mockSessions.set(token, user.email);
@@ -218,12 +267,18 @@ export const handlers = [
   http.post('/api/auth/login', async ({ request }) => {
     const body = await request.json() as { email: string; password: string };
     const passwordHash = await hashMockPassword(body.password);
-    const user = mockUsers.find((row) => row.email === body.email && (row.password === body.password || row.passwordHash === passwordHash));
+    const user = mockUsers.find((row) => row.email === body.email.trim().toLowerCase() && (row.password === body.password || row.passwordHash === passwordHash));
     if (!user) return apiError('Credenciais inválidas', 401);
     const token = `mock-${user.id}`;
     mockSessions.set(token, user.email);
     await save();
     return HttpResponse.json({ token, user: { id: user.id, email: user.email, name: user.name, username: user.username } });
+  }),
+  http.post('/api/auth/expire', async ({ request }) => {
+    const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
+    if (token) mockSessions.delete(token);
+    await save();
+    return new HttpResponse(null, { status: 204 });
   }),
   http.post('/api/auth/logout', async ({ request }) => {
     const token = request.headers.get('authorization')?.replace(/^Bearer\s+/i, '');
@@ -242,7 +297,9 @@ export const handlers = [
     const changes = await request.json() as Record<string, unknown>;
     if (typeof changes.name !== 'string' || changes.name.trim().length < 2 || typeof changes.username !== 'string' || !/^[\w.-]{3,24}$/.test(changes.username)) return apiError('Nome ou nome de usuário inválido.', 422);
     if (changes.avatar && (typeof changes.avatar !== 'string' || !/^https?:\/\//i.test(changes.avatar))) return apiError('O avatar deve ser uma URL HTTP válida.', 422);
-    const profile = { ...(mockProfiles.get(user.id) ?? {}), ...changes };
+    if (mockUsers.some((entry) => entry.id !== user.id && entry.username === changes.username)) return apiError('Nome de usuário já cadastrado.', 409);
+    user.name = changes.name.trim(); user.username = changes.username;
+    const profile = { name: user.name, username: user.username, avatar: changes.avatar ?? '' };
     mockProfiles.set(user.id, profile);
     await save();
     return HttpResponse.json(profile);
@@ -270,7 +327,7 @@ export const handlers = [
     const wallets = mockWallets.get(user.id) ?? [];
     if (typeof wallet.label !== 'string' || wallet.label.trim().length < 2 || typeof wallet.address !== 'string' || wallet.address.trim().length < 8 || !['Ethereum', 'Polygon', 'Solana'].includes(String(wallet.network))) return apiError('Dados da carteira inválidos.', 422);
     if (wallets.some((row) => row.address === wallet.address)) return apiError('Carteira já cadastrada', 409);
-    wallets.push({ ...wallet, primary: wallets.length === 0, id: `wallet_${Date.now()}` });
+    wallets.push({ label: wallet.label, address: wallet.address, network: wallet.network, primary: wallets.length === 0, id: `wallet_${crypto.randomUUID()}` });
     mockWallets.set(user.id, wallets);
     await save();
     return HttpResponse.json({ wallets }, { status: 201 });
@@ -282,7 +339,7 @@ export const handlers = [
     const index = wallets.findIndex((wallet) => wallet.id === params.id);
     if (index < 0) return apiError('Carteira não encontrada', 404);
     const changes = await request.json() as Record<string, unknown>;
-    const updated = { ...wallets[index], ...changes };
+    const updated = { ...wallets[index], label: changes.label ?? wallets[index].label, address: changes.address ?? wallets[index].address, network: changes.network ?? wallets[index].network, primary: changes.primary === true || wallets[index].primary === true };
     if (typeof updated.label !== 'string' || updated.label.trim().length < 2 || typeof updated.address !== 'string' || updated.address.trim().length < 8 || !['Ethereum', 'Polygon', 'Solana'].includes(String(updated.network))) return apiError('Dados da carteira inválidos.', 422);
     if (wallets.some((wallet, walletIndex) => walletIndex !== index && wallet.address === updated.address)) return apiError('Carteira já cadastrada', 409);
     if (changes.primary === true) wallets.forEach((wallet, walletIndex) => { if (walletIndex !== index) wallet.primary = false; });
@@ -319,8 +376,7 @@ export const handlers = [
         timedOutOrderKeys.delete(key);
     const order: Record<string, unknown> = { ...existing.order, status: 'confirmed', version: Number(existing.order.version) + 1 };
         idempotentOrders.set(key, { ...existing, order });
-        const purchased = new Map((order.items as MockCartItem[]).map((item) => [item.id, item.quantity]));
-        mockUserCarts.set(user.id, cartFor(user.id).flatMap((item) => { const quantity = item.quantity - (purchased.get(item.id) ?? 0); return quantity > 0 ? [{ ...item, quantity }] : []; }));
+        completePurchase(user.id, order.items as MockCartItem[]);
         await save();
         emitMockRealtime(user.id, 'order.updated', { orderId: String(order.orderId), status: 'confirmed', version: order.version });
         return HttpResponse.json(order);
@@ -328,8 +384,10 @@ export const handlers = [
       return HttpResponse.json(existing.order);
     }
     const cart = cartFor(user.id);
+    if (!['total', 'discount', 'networkFee'].every((field) => typeof body[field] === 'string' && /^\d+(\.\d{1,8})?$/.test(String(body[field])))) return apiError('Valores monetários inválidos', 422);
+    if (!(mockWallets.get(user.id) ?? []).some((wallet) => wallet.address === body.wallet && wallet.network === body.network)) return apiError('Carteira ou rede inválida', 422);
     const items = Array.isArray(body.items) ? body.items as MockCartItem[] : [];
-    if (!items.length || JSON.stringify(items) !== JSON.stringify(cart)) return apiError('Carrinho alterado. Revise a compra.', 409);
+    if (!items.length || !validCart(items) || JSON.stringify(items) !== JSON.stringify(cart)) return apiError('Carrinho alterado. Revise a compra.', 409);
     for (const item of items) {
       const nft = mockNfts.find((entry) => String(entry.id) === item.nftId);
       if (!nft || nft.price !== item.price || item.quantity > editionAvailability(Number(item.nftId), item.edition)) return apiError('Preço ou disponibilidade alterados. Revise a compra.', 409);
@@ -337,24 +395,25 @@ export const handlers = [
     const subtotal = items.reduce((sum, item) => sum + toUnits(item.price) * BigInt(item.quantity), 0n);
     const fee = items.length ? 1_600_000n : 0n;
     const coupon = typeof body.coupon === 'string' ? body.coupon : undefined;
-    if ((coupon && coupon !== 'KURIO10') || Number(body.quoteVersion) !== quoteVersion(cart, coupon) || Date.parse(String(body.quoteExpiresAt)) <= Date.now()) return apiError('Cotação, cupom ou expiração inválidos. Revise a compra.', 409);
+    if ((coupon && coupon !== 'KURIO10') || Number(body.quoteVersion) !== quoteVersion(cart, coupon) || !(Date.parse(String(body.quoteExpiresAt)) > Date.now())) return apiError('Cotação, cupom ou expiração inválidos. Revise a compra.', 409);
     const expectedDiscount = coupon ? subtotal * 10n / 100n : 0n;
     if (toUnits(String(body.discount ?? '0')) !== expectedDiscount || toUnits(String(body.total)) !== subtotal - expectedDiscount + fee || toUnits(String(body.networkFee)) !== fee) return apiError('Cotação desatualizada. Revise os valores.', 409);
     const rejected = scenario === 'payment-rejected';
-    const order = { userId: user.id, orderId: `ORD-${key.slice(0, 12)}`, status: rejected ? 'rejected' : scenario === 'timeout-after-create' || scenario === 'payment-pending' ? 'pending' : 'confirmed', items: items.map((item) => ({ ...item })), total: body.total, discount: body.discount ?? '0', networkFee: body.networkFee ?? '0', txHash: rejected ? '' : '0xA91FE82C', wallet: body.wallet, provider: body.provider, network: body.network, version: 1, date: new Date().toISOString() };
+    const order = { userId: user.id, orderId: `ORD-${crypto.randomUUID()}`, status: rejected ? 'rejected' : scenario === 'timeout-after-create' || scenario === 'payment-pending' ? 'pending' : 'confirmed', items: items.map((item) => ({ ...item })), total: body.total, discount: body.discount ?? '0', networkFee: body.networkFee ?? '0', txHash: rejected ? '' : '0xA91FE82C', wallet: body.wallet, provider: body.provider, network: body.network, version: 1, date: new Date().toISOString() };
     idempotentOrders.set(key, { fingerprint, order });
     if (scenario === 'timeout-after-create') timedOutOrderKeys.add(key);
     if (order.status === 'confirmed') {
-      const purchased = new Map(items.map((item) => [item.id, item.quantity]));
-      const remaining = cart.flatMap((item) => {
-        const quantity = item.quantity - (purchased.get(item.id) ?? 0);
-        return quantity > 0 ? [{ ...item, quantity }] : [];
-      });
-      mockUserCarts.set(user.id, remaining);
+      completePurchase(user.id, items);
     }
     await save();
-    if (scenario === 'timeout-after-create') return HttpResponse.error();
+    if (scenario === 'timeout-after-create') { await new Promise((resolve) => setTimeout(resolve, 3500)); return HttpResponse.error(); }
     return HttpResponse.json(order, { status: 201 });
+  }),
+  http.get('/api/orders/by-key/:key', ({ request, params }) => {
+    const user = getUser(request);
+    if (!user) return apiError('Autenticação necessária', 401);
+    const order = idempotentOrders.get(String(params.key))?.order;
+    return order?.userId === user.id ? HttpResponse.json(order) : apiError('Pedido não encontrado', 404);
   }),
   http.get('/api/orders/:id', ({ request, params }) => {
     const user = getUser(request);
@@ -371,13 +430,24 @@ export const handlers = [
     nft.available = 3;
     nft.version = (nft.version ?? 1) + 1;
     if (nft.editions) nft.editions = nft.editions.map((edition) => ({ ...edition, available: Math.min(edition.available, 3) }));
-    const userCart = cartFor(user.id);
+    const userCart = [...mockUserCarts.values()].flat();
     for (const item of userCart) {
       if (item.nftId === String(nft.id)) { item.price = nft.price; item.availableQuantity = editionAvailability(nft.id, item.edition); }
     }
     await save();
-    emitMockRealtime(user.id, 'nft.updated', { id: nft.id, price: nft.price, available: nft.available, version: nft.version });
+    broadcastNftUpdate({ id: nft.id, price: nft.price, available: nft.available, editions: nft.editions, version: nft.version });
     return HttpResponse.json({ updated: true, nft });
+  }),
+  http.post('/api/mock/scenarios/nft-sold-out', async ({ request }) => {
+    if (!getUser(request)) return apiError('Autenticação necessária', 401);
+    const nft = mockNfts.find((entry) => entry.id === 42)!;
+    nft.available = 0;
+    nft.editions?.forEach((edition) => { edition.available = 0; });
+    nft.version = (nft.version ?? 1) + 1;
+    refreshCarts();
+    await save();
+    broadcastNftUpdate({ id: nft.id, price: nft.price, available: 0, editions: nft.editions, version: nft.version });
+    return HttpResponse.json({ nft });
   }),
   http.get('/api/mock/scenarios/socket-status', () => HttpResponse.json({ subscriptions: getMockRealtimeSubscriptions() })),
   http.post('/api/mock/scenarios/replay-nft-events', ({ request }) => {
@@ -418,8 +488,7 @@ export const handlers = [
     const order: Record<string, unknown> = { ...entry.order, status, version: Number(entry.order.version) + 1, txHash: status === 'confirmed' ? '0xA91FE82C' : '' };
     idempotentOrders.set(key, { ...entry, order });
     if (status === 'confirmed') {
-      const purchased = new Map((order.items as MockCartItem[]).map((item) => [item.id, item.quantity]));
-      mockUserCarts.set(user.id, cartFor(user.id).flatMap((item) => { const quantity = item.quantity - (purchased.get(item.id) ?? 0); return quantity > 0 ? [{ ...item, quantity }] : []; }));
+      completePurchase(user.id, order.items as MockCartItem[]);
     }
     await save();
     emitMockRealtime(user.id, 'order.updated', { orderId: String(order.orderId), status, version: order.version });

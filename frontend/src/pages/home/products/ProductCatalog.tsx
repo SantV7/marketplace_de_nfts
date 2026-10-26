@@ -1,3 +1,5 @@
+import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import Card from '@/components/nftProduct/Card';
 import { tabs, type Nft, type SortOrder, type TabId } from './productData';
 import { ChevronDown, SlidersHorizontal, LayoutGrid, Sparkles, TrendingUp, ChevronLeft, ChevronRight, ImagePlus } from 'lucide-react';
@@ -9,6 +11,8 @@ interface ProductCatalogProps {
   currentPage: number;
   pageCount: number;
   loading?: boolean;
+  updating?: boolean;
+  onRetry: () => void;
   error?: string;
   onTabChange: (tab: TabId) => void;
   onSortChange: (order: SortOrder) => void;
@@ -22,6 +26,8 @@ const ProductCatalog = ({
   currentPage,
   pageCount,
   loading = false,
+  updating = false,
+  onRetry,
   error = '',
   onTabChange,
   onSortChange,
@@ -41,7 +47,8 @@ const ProductCatalog = ({
   };
 
   return (
-    <div className="min-w-0 font-mono">
+    <div className="min-w-0 font-mono" aria-busy={loading || updating}>
+      <h2 className="sr-only">Catálogo de NFTs</h2>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
         <div
           className="flex w-full flex-nowrap items-center justify-between gap-x-3 overflow-x-auto md:w-auto md:justify-start md:gap-x-6"
@@ -67,12 +74,12 @@ const ProductCatalog = ({
           ))}
         </div>
 
-        <div className="flex w-full items-center justify-between gap-2 text-xs text-[#CFB28C] md:w-auto md:justify-start">
-          <span className="flex items-center gap-1.5 whitespace-nowrap text-[15px] font-medium leading-4 text-[#F5F1EB]">
+        <div className="flex w-full max-w-full items-center justify-between gap-2 text-xs text-[#CFB28C] md:w-auto md:justify-start">
+          <span className="flex items-center gap-1.5 whitespace-nowrap text-xs font-medium leading-4 text-[#F5F1EB] md:text-[15px]">
             <SlidersHorizontal className="h-3.5 w-3.5 text-[#D28A4C]" />
             Ordenar por:
           </span>
-          <div className="relative inline-block">
+          <div className="relative inline-block min-w-0 flex-1">
             <select
               aria-label="Ordenar NFTs"
               value={sortOrder}
@@ -82,7 +89,7 @@ const ProductCatalog = ({
                   onSortChange(value);
                 }
               }}
-              className="appearance-none cursor-pointer rounded-lg bg-[#231712] px-3 py-2 pr-9 text-[15px] font-medium leading-4 text-[#F5F1EB] border border-[#3D2C24] transition-all hover:border-[#D28A4C] focus:outline-none focus:ring-1 focus:ring-[#D28A4C]"
+              className="w-full appearance-none cursor-pointer rounded-lg bg-[#231712] px-3 py-2 pr-9 text-xs md:text-[15px] font-medium leading-4 text-[#F5F1EB] border border-[#3D2C24] transition-all hover:border-[#D28A4C] focus:outline-none focus:ring-1 focus:ring-[#D28A4C]"
             >
               <option value="recent" className="bg-[#231712] text-[#F5F1EB]">Listados recentemente</option>
               <option value="price-asc" className="bg-[#231712] text-[#F5F1EB]">Preço: menor para maior</option>
@@ -95,7 +102,7 @@ const ProductCatalog = ({
         </div>
       </div>
 
-      {loading ? <div role="status" className="grid grid-cols-2 gap-6 xl:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <div key={index} className="aspect-[0.8] animate-pulse rounded-2xl bg-[#231712]" />)}</div> : error ? <p role="alert" className="py-16 text-center text-sm text-[#CFB28C]">{error}</p> : products.length > 0 ? (
+      {loading ? <div role="status" className="grid grid-cols-2 gap-6 xl:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <Skeleton key={index} className="aspect-[0.8] rounded-2xl" />)}</div> : error ? <div className="py-16 text-center"><p role="alert" className="mb-4 text-sm text-[#CFB28C]">{error}</p><Button onClick={onRetry}>Tentar novamente</Button></div> : products.length > 0 ? (
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 min-[520px]:gap-x-6 [&>article:nth-child(even)]:translate-y-8 md:[&>article:nth-child(even)]:translate-y-0 xl:grid-cols-3">
           {products.map((nft, index) => (
             <Card

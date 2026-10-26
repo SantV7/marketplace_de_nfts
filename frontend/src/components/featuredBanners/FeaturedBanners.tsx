@@ -1,5 +1,6 @@
-import esmeralApe from '@/assets/img/nfts/esmeral_ape.png';
-import brownNft from '@/assets/img/nfts/brown_nft.png';
+import { Link } from '@tanstack/react-router';
+import esmeralApe from '@/assets/img/nfts/esmeral_ape.webp';
+import brownNft from '@/assets/img/nfts/brown_nft.webp';
 
 const FeaturedBanners = () => {
   return (
@@ -8,6 +9,7 @@ const FeaturedBanners = () => {
         <div className="flex flex-col sm:flex-row items-center justify-between rounded-xl bg-[#231712] p-6 border border-transparent transition-all duration-300 hover:border-[#D28A4C]">
           <div className="w-full sm:w-1/2 mb-4 sm:mb-0">
             <img
+              loading="lazy"
               src={esmeralApe}
               alt="Lançamentos gênesis de edição limitada"
               className="h-48 w-full rounded-lg object-cover"
@@ -22,18 +24,19 @@ const FeaturedBanners = () => {
                 Colecione edições escassas diretamente dos criadores antes da revelação pública.
               </p>
             </div>
-            <button
-              type="button"
+            <Link
+              to="/market"
               className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#D28A4C] px-4 py-2 text-xs font-bold text-[#140D0A] transition-colors hover:bg-[#E09A5C] w-fit"
             >
               Explorar →
-            </button>
+            </Link>
           </div>
         </div>
 
         <div className="flex flex-col sm:flex-row items-center justify-between rounded-xl bg-[#231712] p-6 border border-transparent transition-all duration-300 hover:border-[#D28A4C]">
           <div className="w-full sm:w-1/2 mb-4 sm:mb-0">
             <img
+              loading="lazy"
               src={brownNft}
               alt="Arte digital selecionada e muito mais"
               className="h-48 w-full rounded-lg object-cover"
@@ -48,12 +51,12 @@ const FeaturedBanners = () => {
                 Explore novos artistas, coleções verificadas e obras digitais que definem a cultura.
               </p>
             </div>
-            <button
-              type="button"
+            <Link
+              to="/market"
               className="mt-4 inline-flex items-center gap-1.5 rounded-lg bg-[#D28A4C] px-4 py-2 text-xs font-bold text-[#140D0A] transition-colors hover:bg-[#E09A5C] w-fit"
             >
               Explorar →
-            </button>
+            </Link>
           </div>
         </div>
       </div>

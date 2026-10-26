@@ -3,6 +3,7 @@ import axios from 'axios';
 
 export const api = axios.create({
   baseURL: '/api',
+  paramsSerializer: { indexes: null },
   headers: {
     'Content-Type': 'application/json',
   },
@@ -14,6 +15,7 @@ api.interceptors.response.use(
     if (axios.isAxiosError(error) && error.response?.status === 401 && typeof window !== 'undefined' && localStorage.getItem('kurio_token')) {
       localStorage.removeItem('kurio_token');
       window.dispatchEvent(new Event('kurio:session-expired'));
+      window.dispatchEvent(new Event('kurio:session-changed'));
     }
     return Promise.reject(error);
   },

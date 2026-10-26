@@ -2,9 +2,10 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { createRequire } from 'node:module';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
-import { tmpdir } from 'node:os';
+import { tmpdir, cpus, totalmem, release } from 'node:os';
 import { createServer } from 'node:net';
 import { chromium } from '@playwright/test';
+import desktopConfig from 'lighthouse/core/config/desktop-config.js';
 
 const require = createRequire(import.meta.url);
 const lighthouse = require('lighthouse').default;
@@ -22,7 +23,8 @@ await new Promise((resolve) => probe.listen(0, '127.0.0.1', resolve));
 const debuggingPort = probe.address().port;
 await new Promise((resolve, reject) => probe.close((error) => error ? reject(error) : resolve()));
 const userDataDir = await mkdtemp(path.join(tmpdir(), 'kurio-lighthouse-'));
-const chromeProcess = spawn(chrome, [`--remote-debugging-port=${debuggingPort}`, `--user-data-dir=${userDataDir}`, '--headless=new', '--no-sandbox', '--disable-gpu', 'about:blank'], { stdio: 'ignore' });
+const chromeFlags = ['--headless=new', '--no-sandbox', '--disable-gpu'];
+const chromeProcess = spawn(chrome, [`--remote-debugging-port=${debuggingPort}`, `--user-data-dir=${userDataDir}`, ...chromeFlags, 'about:blank'], { stdio: 'ignore' });
 
 try {
   const deadline = Date.now() + 30_000;
@@ -41,9 +43,10 @@ try {
   for (const page of config.pages) for (const profile of config.profiles) {
     const runs = [];
     for (let run = 1; run <= config.runsPerPageProfile; run++) {
-      const result = await lighthouse(`http://127.0.0.1:4173${page.path}`, { port: debuggingPort, output: ['html', 'json'], onlyCategories: config.categories, formFactor: profile.formFactor, screenEmulation: profile.screenEmulation });
+      const result = await lighthouse(`http://127.0.0.1:4173${page.path}`, { port: debuggingPort, output: ['html', 'json'], onlyCategories: config.categories, formFactor: profile.formFactor, screenEmulation: profile.screenEmulation }, profile.preset === 'desktop' ? desktopConfig : undefined);
       const lhr = result.lhr;
       const scores = Object.fromEntries(config.categories.map((category) => [category, Math.round((lhr.categories[category]?.score ?? 0) * 100)]));
+      console.log(`${page.name} / ${profile.name} / ${run}: ${JSON.stringify(scores)}`);
       const reportName = `${page.name}-${profile.name}-run-${run}`;
       await writeFile(path.join(out, `${reportName}.html`), result.report[0]);
       await writeFile(path.join(out, `${reportName}.json`), result.report[1]);
@@ -59,7 +62,7 @@ try {
     });
   }
   const chromeVersion = summaries[0]?.runs[0]?.userAgent ?? 'Disponível nos relatórios JSON individuais';
-  await writeFile(path.join(out, 'summary.json'), JSON.stringify({ generatedAt: new Date().toISOString(), lighthouseVersion: require('lighthouse/package.json').version, chromeVersion, nodeVersion: process.version, platform: process.platform, chrome, summaries }, null, 2));
+  await writeFile(path.join(out, 'summary.json'), JSON.stringify({ generatedAt: new Date().toISOString(), lighthouseVersion: require('lighthouse/package.json').version, chromeVersion, nodeVersion: process.version, platform: process.platform, osRelease: release(), cpu: cpus()[0]?.model, logicalCpus: cpus().length, memoryGB: Math.round(totalmem() / 1024 ** 3), conditions: 'Build demo em localhost; mocks no cenário padrão; cache limpo por navegação; throttling mobile padrão e desktopDense4G oficial do Lighthouse; sem testes concorrentes.', profiles: config.profiles, chrome, chromeFlags, summaries }, null, 2));
   console.log(`Reports written to ${out}`);
 } finally {
   chromeProcess.kill();

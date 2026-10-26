@@ -1,11 +1,19 @@
 import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { Link } from '@tanstack/react-router';
-import type { Wallet } from '@/services/contracts';
-import { formatEth } from '@/pages/cart/cartPricing';
+import type { CartItem, User, Wallet } from '@/services/contracts';
+import CheckoutProfileForm from './CheckoutProfileForm';
+import { formatEth, toEthUnits } from '@/pages/cart/cartPricing';
 import { walletProviders, type WalletProviderId } from './paymentData';
 
 interface CheckoutMobileProps {
+  items: CartItem[];
+  subtotal: bigint;
+  discount: bigint;
+  fee: bigint;
+  user?: User;
+  formRef: (form: HTMLFormElement | null) => void;
+  onFormChange: (form: HTMLFormElement) => void;
   total: bigint;
   selectedProvider: WalletProviderId;
   selectedWallet: string;
@@ -35,6 +43,13 @@ const CoinbaseWalletIcon = () => (
 );
 
 const CheckoutMobile = ({
+  items,
+  subtotal,
+  discount,
+  fee,
+  user,
+  formRef,
+  onFormChange,
   total,
   selectedProvider,
   selectedWallet,
@@ -47,6 +62,8 @@ const CheckoutMobile = ({
   onSubmit,
 }: CheckoutMobileProps) => (
   <form
+    ref={formRef}
+    onChange={(event) => onFormChange(event.currentTarget)}
     onSubmit={onSubmit}
     className="mx-auto flex min-h-svh w-full max-w-[390px] flex-col rounded-[32px] bg-[#140D0A] px-[21px] pb-6 pt-8 md:hidden"
   >
@@ -69,7 +86,7 @@ const CheckoutMobile = ({
         </h2>
         <Link to="/wallets" className="text-xs font-bold text-[#D28A4C]">Gerir carteiras</Link>
       </div>
-      <fieldset className="space-y-3">
+      <fieldset className="min-w-0 space-y-3">
         <legend className="sr-only">Selecione uma carteira conectada</legend>
         {wallets.map((wallet) => (
           <label
@@ -80,7 +97,7 @@ const CheckoutMobile = ({
               type="radio"
               name="connectedWallet"
               value={wallet.address}
-              checked={selectedWallet === wallet.id}
+              checked={selectedWallet === wallet.address}
               onChange={() => onWalletChange(wallet.address)}
               className="peer sr-only"
             />
@@ -90,7 +107,7 @@ const CheckoutMobile = ({
             >
               <span
                 className={`h-1.5 w-1.5 rounded-full ${
-                  selectedWallet === wallet.id ? 'bg-[#D28A4C]' : 'bg-transparent'
+                  selectedWallet === wallet.address ? 'bg-[#D28A4C]' : 'bg-transparent'
                 }`}
               />
             </span>
@@ -114,7 +131,7 @@ const CheckoutMobile = ({
       <h2 id="mobile-wallet-options-heading" className="mb-3 text-base font-bold">
         Carteira e rede
       </h2>
-      <fieldset className="space-y-3">
+      <fieldset className="min-w-0 space-y-3">
         <legend className="sr-only">Selecione a carteira para pagamento</legend>
         {walletProviders.map((provider) => (
           <label
@@ -152,8 +169,12 @@ const CheckoutMobile = ({
       </fieldset>
     </section>
 
-    <input type="hidden" name="walletAddress" value={selectedWallet} />
-    <input type="hidden" name="network" value={wallets.find((wallet) => wallet.address === selectedWallet)?.network ?? ''} />
+    <div className="mt-6"><CheckoutProfileForm user={user} selectedProvider={selectedProvider} onProviderChange={onProviderChange} wallets={wallets} selectedWallet={selectedWallet} onWalletChange={onWalletChange} /></div>
+    <details className="mt-5 rounded-xl border border-[#3D2C24] p-3 text-xs">
+      <summary className="cursor-pointer font-bold text-[#D28A4C]">Revisar itens e valores</summary>
+      <ul className="my-3 space-y-2">{items.map((item) => <li key={item.id}>{item.name} · {item.edition} · {item.quantity} unidade(s): {formatEth(toEthUnits(item.price) * BigInt(item.quantity))} ETH</li>)}</ul>
+      <dl className="space-y-2"><div className="flex justify-between gap-2"><dt>Subtotal</dt><dd>{formatEth(subtotal)} ETH</dd></div><div className="flex justify-between gap-2"><dt>Desconto</dt><dd>{formatEth(discount)} ETH</dd></div><div className="flex justify-between gap-2"><dt>Taxa de rede</dt><dd>{formatEth(fee)} ETH</dd></div></dl>
+    </details>
 
     <div className="mt-3 flex items-center justify-end gap-4 text-base font-bold">
       <span>Total:</span>

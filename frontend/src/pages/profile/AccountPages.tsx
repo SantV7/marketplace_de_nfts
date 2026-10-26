@@ -1,8 +1,8 @@
 import { useState, type FormEvent } from 'react';
-import { Link } from '@tanstack/react-router';
+import { Link, useNavigate } from '@tanstack/react-router';
 import Navbar from '@/components/navbar/Navbar';
 import Footer from '@/components/footer/Footer';
-import { useAddWallet, useChangePassword, useProfile, useUpdateProfile, useUpdateWallet, useWallets } from '@/services/queries';
+import { useFavorites, useNfts, useLogout, useAddWallet, useChangePassword, useProfile, useUpdateProfile, useUpdateWallet, useWallets } from '@/services/queries';
 import type { Wallet } from '@/services/contracts';
 
 const shell = 'mx-auto min-h-[65vh] max-w-3xl px-5 py-10 font-mono text-[#F5F1EB]';
@@ -11,6 +11,10 @@ const button = 'rounded bg-[#D28A4C] p-3 font-bold text-[#140D0A]';
 
 export const ProfilePage = () => {
   const query = useProfile();
+  const navigate = useNavigate();
+  const logout = useLogout();
+  const favorites = useFavorites();
+  const catalog = useNfts({ limit: 100 });
   const update = useUpdateProfile();
   const changePassword = useChangePassword();
   const [message, setMessage] = useState('');
@@ -49,22 +53,25 @@ export const ProfilePage = () => {
   return <><Navbar /><main className={shell}>
     <h1 className="mb-6 text-2xl font-bold">Perfil do colecionador</h1>
     {query.isLoading ? <p role="status">Carregando perfil…</p> : query.isError ? <p role="alert">Não foi possível carregar o perfil. Inicie sessão novamente.</p> : <>
-      <form className="grid gap-4" onSubmit={saveProfile}>
-        <label>Nome<input name="name" defaultValue={query.data?.name ?? ''} minLength={2} required className={field} /></label>
-        <label>Nome de usuário<input name="username" defaultValue={query.data?.username ?? ''} minLength={3} maxLength={24} pattern="[\w.-]{3,24}" required className={field} /></label>
-        <label>URL do avatar<input name="avatar" type="url" defaultValue={String(query.data?.avatar ?? '')} className={field} /></label>
+      <form className="grid gap-4" onSubmit={saveProfile} aria-describedby="profile-feedback">
+        {typeof query.data?.avatar === 'string' && query.data.avatar && <img src={query.data.avatar} alt="Avatar do colecionador" width={80} height={80} className="h-20 w-20 rounded-full object-cover" />}
+        <label>Nome<input name="name" aria-describedby="profile-feedback" defaultValue={query.data?.name ?? ''} minLength={2} required className={field} /></label>
+        <label>Nome de usuário<input name="username" aria-describedby="profile-feedback" defaultValue={query.data?.username ?? ''} minLength={3} maxLength={24} pattern="[\w.-]{3,24}" required className={field} /></label>
+        <label>URL do avatar<input name="avatar" aria-describedby="profile-feedback" type="url" defaultValue={String(query.data?.avatar ?? '')} className={field} /></label>
         <button className={button} disabled={update.isPending}>Salvar perfil</button>
-        <p role="status">{message}</p>
+        <p id="profile-feedback" role={message.includes('inválid') ? 'alert' : 'status'}>{message}</p>
       </form>
-      <form className="mt-10 grid gap-4 border-t border-[#3D2C24] pt-6" onSubmit={savePassword}>
+      <form className="mt-10 grid gap-4 border-t border-[#3D2C24] pt-6" onSubmit={savePassword} aria-describedby="password-feedback">
         <h2 className="text-xl font-bold">Alterar senha</h2>
-        <label>Senha atual<input name="currentPassword" type="password" autoComplete="current-password" required className={field} /></label>
-        <label>Nova senha<input name="newPassword" type="password" autoComplete="new-password" minLength={8} required className={field} /></label>
-        <label>Confirmar nova senha<input name="confirmPassword" type="password" autoComplete="new-password" minLength={8} required className={field} /></label>
+        <label>Senha atual<input name="currentPassword" type="password" aria-describedby="password-feedback" autoComplete="current-password" required className={field} /></label>
+        <label>Nova senha<input name="newPassword" type="password" aria-describedby="password-feedback" autoComplete="new-password" minLength={8} required className={field} /></label>
+        <label>Confirmar nova senha<input name="confirmPassword" type="password" aria-describedby="password-feedback" autoComplete="new-password" minLength={8} required className={field} /></label>
         <button className={button} disabled={changePassword.isPending}>Atualizar senha</button>
-        <p role="status">{passwordMessage}</p>
+        <p id="password-feedback" role={passwordMessage && passwordMessage !== 'Senha alterada.' ? 'alert' : 'status'}>{passwordMessage}</p>
       </form>
     </>}
+    <section id="favorites" className="mt-8"><h2 className="mb-4 text-xl font-bold">Favoritos</h2>{favorites.data?.length ? <ul className="space-y-2">{catalog.data?.data.filter((nft) => favorites.data?.includes(nft.id)).map((nft) => <li key={nft.id}><Link to="/nft/$id" params={{ id: String(nft.id) }} className="text-[#D28A4C]">{nft.name} — {nft.price} ETH</Link></li>)}</ul> : <p>Nenhum NFT favorito.</p>}</section>
+    <button className="mt-6 block rounded border border-[#D28A4C] p-3" disabled={logout.isPending} onClick={async () => { await logout.mutateAsync(); void navigate({ to: '/' }); }}>Sair da conta</button>
     <Link to="/wallets" className="mt-6 inline-block text-[#D28A4C]">Gerenciar carteiras</Link>
   </main><Footer /></>;
 };
@@ -115,7 +122,7 @@ export const WalletsPage = () => {
     <h1 className="mb-6 text-2xl font-bold">Carteiras</h1>
     {query.isLoading && <p role="status">Carregando carteiras…</p>}
     {query.isError && <p role="alert">Não foi possível carregar as carteiras.</p>}
-    <div className="mb-6 space-y-3">{(query.data ?? []).map((wallet) => <WalletEditor key={wallet.id} wallet={wallet} onSave={saveWallet} />)}</div>
+    <div className="mb-6 space-y-3">{(query.data ?? []).map((wallet) => <WalletEditor key={`${wallet.id}:${wallet.primary}`} wallet={wallet} onSave={saveWallet} />)}</div>
     <form className="grid gap-3 border-t border-[#3D2C24] pt-6" onSubmit={addWallet}>
       <h2 className="text-xl font-bold">Adicionar carteira</h2>
       <label>Identificação<input name="label" minLength={2} required className={field} /></label>

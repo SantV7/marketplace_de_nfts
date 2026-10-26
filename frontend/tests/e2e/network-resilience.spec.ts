@@ -28,6 +28,7 @@ const request = (page: Page, path: string, method = 'GET', body?: unknown, key?:
 
 const login = async (page: Page, email = 'contato@email.com', password = 'Kurio123') => {
   const result = await request(page, '/api/auth/login', 'POST', { email, password });
+  expect(result.status, 'A preparação da sessão deve receber HTTP 200').toBe(200);
   if (result.status === 200) {
     await page.evaluate((token) => { localStorage.setItem('kurio_token', token); window.dispatchEvent(new Event('kurio:session-changed')); }, String(result.data.token));
     await request(page, '/api/cart/merge-guest', 'POST');
@@ -43,14 +44,18 @@ const addItem = async (page: Page, quantity = 1) => {
 const orderPayload = async (page: Page) => {
   const cart = await request(page, '/api/cart');
   const quote = await request(page, '/api/quotes', 'POST', {});
-  return { items: cart.data.items, total: quote.data.total, discount: quote.data.discount, networkFee: quote.data.networkFee, coupon: quote.data.coupon, quoteVersion: quote.data.version, quoteExpiresAt: quote.data.expiresAt, wallet: '0xmock-wallet', provider: 'metamask', network: 'Ethereum' };
+  const response = await request(page, '/api/wallets');
+  const wallet = (response.data.wallets as Array<{ address: string; network: string }>)[0];
+  return { items: cart.data.items, total: quote.data.total, discount: quote.data.discount, networkFee: quote.data.networkFee, coupon: quote.data.coupon, quoteVersion: quote.data.version, quoteExpiresAt: quote.data.expiresAt, wallet: wallet.address, provider: 'metamask', network: wallet.network };
 };
 
 test.beforeEach(async ({ page }) => {
+  await page.clock.setFixedTime(new Date('2026-10-26T12:00:00Z'));
   await page.goto('/');
   await expect(page.getByRole('heading', { name: /SEJA DONO/ })).toBeVisible({ timeout: 15_000 });
+  await expect(page.getByRole('link', { name: 'Ver Emerald Ape #042' })).toBeVisible();
   await page.evaluate(() => { localStorage.clear(); sessionStorage.clear(); });
-  await request(page, '/api/mock/reset', 'POST');
+  expect((await request(page, '/api/mock/reset', 'POST')).status).toBe(200);
 });
 
 test('visitor cart and quote work without a session while private checkout rejects expired sessions', async ({ page }) => {
@@ -125,9 +130,9 @@ test('visitor cart quantity, coupon removal and item removal work through the in
   await expect(page.locator('span[aria-live="polite"]:visible').filter({ hasText: /^2$/ })).toBeVisible();
   await page.locator('input#cart-coupon:visible').fill('KURIO10');
   await page.getByRole('button', { name: 'Aplicar' }).click();
-  await expect(page.getByRole('status')).toContainText('Cupom aplicado');
+  await expect(page.locator('#coupon-feedback')).toContainText('Cupom aplicado');
   await page.getByRole('button', { name: 'Remover cupom' }).click();
-  await expect(page.getByRole('status')).toContainText('Cupom removido');
+  await expect(page.locator('#coupon-feedback')).toContainText('Cupom removido');
   await page.getByRole('button', { name: 'Remover Emerald Ape do carrinho' }).first().click();
   await expect(page.locator('h2:visible').filter({ hasText: 'Seu carrinho está vazio' })).toBeVisible();
 });
@@ -139,6 +144,7 @@ test('authenticated cart and mock session survive a page refresh', async ({ page
   expect((await request(page, '/api/auth/session')).status).toBe(200);
   await page.reload();
   const persisted = await page.evaluate(() => ({ token: localStorage.getItem('kurio_token'), state: localStorage.getItem('kurio_mock_state_v1') }));
+  await expect(page.getByRole('heading', { name: /SEJA DONO/ })).toBeVisible();
   expect(persisted.token).toBeTruthy();
   expect((await request(page, '/api/auth/session')).status).toBe(200);
   const cart = await request(page, '/api/cart');
@@ -230,7 +236,7 @@ test('purchase completes from NFT detail to confirmed receipt without duplicate 
   await expect(page).toHaveURL(/\/cart$/);
   await page.goto('/payment');
   await expect(page.getByRole('button', { name: 'Conectar carteira' })).toBeVisible();
-  if ((page.viewportSize()?.width ?? 1440) >= 768) {
+  {
     await page.locator('input[name="displayName"]').fill('Vinicius');
     await page.locator('input[name="username"]').fill('santv7');
     await page.locator('select[name="network"]').selectOption('Ethereum');
@@ -362,4 +368,169 @@ test('private order retrieval does not disclose another user’s order', async (
   await request(page, '/api/auth/logout', 'POST');
   await login(page, 'colecionador@email.com');
   expect((await request(page, `/api/orders/${created.data.orderId}`)).status).toBe(404);
+});
+
+const prepareCheckout = async (page: Page) => {
+  await login(page);
+  await addItem(page);
+  await page.goto('/payment');
+  await page.locator('input[name="displayName"]').fill('Colecionador de teste');
+  await page.locator('input[name="username"]').fill('santv7');
+  await page.locator('input[name="profileName"]').fill('Minha coleção');
+  await page.locator('input[name="referralCode"]').fill('KURIO');
+  await page.locator('input[name="email"]').fill('contato@email.com');
+  await page.locator('input[name="ensName"]').fill('colecionador');
+  await page.getByRole('button', { name: 'Conectar carteira' }).click();
+  await expect(page.getByRole('button', { name: 'Desconectar carteira' })).toBeVisible();
+};
+
+test('checkout recovers a timed-out transaction through the interface after refresh', async ({ page }) => {
+  await prepareCheckout(page);
+  const keys: string[] = [];
+  page.on('request', (req) => { if (req.method() === 'POST' && req.url().endsWith('/api/orders')) keys.push(req.headers()['idempotency-key']); });
+  await page.evaluate(() => localStorage.setItem('kurio_mock_scenario', 'timeout-after-create'));
+  await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  await expect(page.getByRole('status')).toContainText('tentativa foi guardada');
+  await page.reload();
+  await expect(page.locator('input[name="displayName"]')).toHaveValue('Colecionador de teste');
+  await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  await expect(page.getByRole('heading', { name: 'Recibo demonstrativo do pedido' })).toBeVisible();
+  expect(keys).toHaveLength(2);
+  expect(keys[1]).toBe(keys[0]);
+  await page.reload();
+  await expect(page.getByRole('heading', { name: 'Recibo demonstrativo do pedido' })).toBeVisible();
+});
+
+test('checkout displays payment refusal and preserves the cart after refresh', async ({ page }) => {
+  await prepareCheckout(page);
+  await page.evaluate(() => localStorage.setItem('kurio_mock_scenario', 'payment-rejected'));
+  await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  await expect(page.getByRole('status')).toContainText('Pagamento recusado');
+  await page.reload();
+  await expect(page.getByRole('status')).toContainText('Pagamento recusado');
+  await page.goto('/cart');
+  await page.reload();
+  await expect(page.getByRole('button', { name: 'Remover Emerald Ape do carrinho' })).toBeVisible();
+  expect((await request(page, '/api/cart')).data.items).toHaveLength(1);
+});
+
+test('checkout requires a second confirmation after a Socket.IO price change', async ({ page }) => {
+  await prepareCheckout(page);
+  let orders = 0;
+  page.on('request', (req) => { if (req.method() === 'POST' && req.url().endsWith('/api/orders')) orders++; });
+  await request(page, '/api/mock/scenarios/nft-price-change', 'POST');
+  await expect(page.getByRole('status')).toContainText('Preço ou disponibilidade alterados');
+  await expect(page.getByText('2.406 ETH', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  await expect(page.getByRole('status')).toContainText('confirme novamente');
+  expect(orders).toBe(0);
+  await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  await expect(page).toHaveURL(/order-confirmation/);
+  expect(orders).toBe(1);
+});
+
+test('sold-out editions block checkout and preserve the order draft', async ({ page }) => {
+  await prepareCheckout(page);
+  await request(page, '/api/mock/scenarios/nft-sold-out', 'POST');
+  await expect(page.getByRole('status')).toContainText('Preço ou disponibilidade alterados');
+  await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  await expect(page.getByRole('status')).toContainText('Não foi possível validar');
+  await expect(page).toHaveURL(/payment/);
+  expect((await request(page, '/api/cart')).data.items).toHaveLength(1);
+});
+
+test('session expiration during checkout restores collector context after login', async ({ page }) => {
+  await prepareCheckout(page);
+  await request(page, '/api/auth/expire', 'POST');
+  await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  await expect(page).toHaveURL(/login\?redirect=/);
+  await page.getByRole('textbox', { name: 'contato@email.com' }).fill('contato@email.com');
+  await page.getByRole('textbox', { name: 'Senha', exact: true }).fill('Kurio123');
+  await page.locator('form').getByRole('button', { name: 'Entrar', exact: true }).click();
+  await expect(page).toHaveURL(/payment/);
+  await expect(page.locator('input[name="displayName"]')).toHaveValue('Colecionador de teste');
+  await expect(page.locator('input[name="referralCode"]')).toHaveValue('KURIO');
+});
+
+test('pending checkout reconciles its confirmed state after socket interruption', async ({ page }) => {
+  await prepareCheckout(page);
+  await page.evaluate(() => localStorage.setItem('kurio_mock_scenario', 'payment-pending'));
+  const created = page.waitForResponse((response) => response.url().endsWith('/api/orders') && response.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Confirmar compra' }).click();
+  const order = await (await created).json() as { orderId: string };
+  await expect(page.getByRole('status')).toContainText('Pedido pendente');
+  await request(page, '/api/mock/scenarios/socket-disconnect', 'POST');
+  await request(page, `/api/mock/scenarios/orders/${order.orderId}/confirmed`, 'POST');
+  await expect(page.getByRole('heading', { name: 'Recibo demonstrativo do pedido' })).toBeVisible({ timeout: 15_000 });
+  await request(page, `/api/mock/scenarios/orders/${order.orderId}/rejected`, 'POST');
+  expect((await request(page, `/api/orders/${order.orderId}`)).data.status).toBe('confirmed');
+});
+
+test('late catalog responses cannot replace the latest search', async ({ page }) => {
+  await page.evaluate(() => localStorage.setItem('kurio_mock_scenario', 'variable'));
+  await page.goto('/market?page=2');
+  await page.goto('/market?q=Emerald&page=1');
+  await expect(page.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Golden Beat #207' })).not.toBeVisible();
+  await expect(page).toHaveURL(/q=Emerald/);
+});
+
+test('gallery dialog traps keyboard focus and returns it on Escape', async ({ page }) => {
+  test.skip(test.info().project.name === 'mobile-chromium', 'Ampliação pertence ao frame desktop; o detalhe mobile tem galeria inline.');
+  await page.goto('/nft/42');
+  const trigger = page.getByRole('button', { name: 'Ampliar imagem' });
+  await trigger.click();
+  const dialog = page.getByRole('dialog');
+  await expect(dialog).toBeVisible();
+  await page.keyboard.press('Tab');
+  await expect(dialog.locator(':focus')).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(dialog).not.toBeVisible();
+  await expect(trigger).toBeFocused();
+});
+
+test('registration, logout and account switch clear private interface data', async ({ page }) => {
+  const routeErrors: string[] = [];
+  page.on('pageerror', (error) => routeErrors.push(error.message));
+  page.on('console', (message) => {
+    if (message.type() === 'error' && message.text().includes('Could not find an active match')) routeErrors.push(message.text());
+  });
+  await page.goto('/register');
+  await page.getByPlaceholder('Nome de usuário').fill('novo_colecionador');
+  await page.getByPlaceholder('Digite seu e-mail').fill('novo@example.test');
+  await page.getByRole('textbox', { name: 'Senha', exact: true }).fill('Kurio456');
+  await page.getByPlaceholder('Confirmar senha').fill('Kurio456');
+  await page.locator('form').getByRole('button', { name: /Criar perfil|Criar conta/ }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto('/nft/42');
+  await page.getByRole('button', { name: 'Adicionar aos favoritos' }).click();
+  await expect(page.getByRole('button', { name: 'Remover dos favoritos' })).toHaveAttribute('aria-pressed', 'true');
+  await page.goto('/profile');
+  await expect(page.locator('#favorites')).toContainText('Emerald Ape');
+  await page.getByRole('button', { name: 'Sair da conta' }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto('/login');
+  await page.getByRole('textbox', { name: 'contato@email.com' }).fill('colecionador@email.com');
+  await page.getByRole('textbox', { name: 'Senha', exact: true }).fill('Kurio123');
+  await page.locator('form').getByRole('button', { name: 'Entrar', exact: true }).click();
+  await expect(page).toHaveURL(/\/$/);
+  await page.goto('/profile');
+  await expect(page.locator('input[name="name"]')).toHaveValue('Marina Costa');
+  await expect(page.locator('#favorites')).toContainText('Nenhum NFT favorito');
+  expect(routeErrors).toEqual([]);
+});
+
+test('layouts reflow at mobile, tablet, desktop and equivalent 200 percent zoom', async ({ page }) => {
+  test.setTimeout(90_000);
+  test.skip(test.info().project.name !== 'desktop-chromium', 'Matriz de larguras executada uma vez.');
+  await login(page);
+  await addItem(page);
+  for (const width of [390, 768, 1440, 720]) {
+    await page.setViewportSize({ width, height: 900 });
+    for (const path of ['/', '/nft/42', '/cart', '/payment', '/profile', '/wallets']) {
+      await page.goto(path);
+      await expect(page.locator('h1:visible').first()).toBeVisible();
+      expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${path} at ${width}px`).toBeTruthy();
+    }
+  }
 });

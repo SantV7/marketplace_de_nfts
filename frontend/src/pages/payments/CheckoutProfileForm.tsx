@@ -8,9 +8,10 @@ import {
   walletProviders,
 } from './paymentData';
 import type { WalletProviderId } from './paymentData';
-import type { Wallet } from '@/services/contracts';
+import type { User, Wallet } from '@/services/contracts';
 
 interface CheckoutProfileFormProps {
+  user?: User;
   selectedProvider: WalletProviderId;
   onProviderChange: (provider: WalletProviderId) => void;
   wallets: Wallet[];
@@ -22,6 +23,7 @@ const fieldClassName =
   'h-10 w-full rounded-[3px] border border-[#3D2C24] bg-transparent px-3 text-xs text-[#F5F1EB] outline-none transition-colors placeholder:text-[#8C7A6B] focus:border-[#D28A4C]';
 
 const CheckoutProfileForm = ({
+  user,
   selectedProvider,
   onProviderChange,
   wallets,
@@ -40,23 +42,23 @@ const CheckoutProfileForm = ({
       <div className="grid gap-x-5 gap-y-3 sm:grid-cols-2">
         <label className="block min-w-0 text-xs">
           <span className="mb-1 block">Nome de exibição<span className="text-[#D28A4C]">*</span></span>
-          <input name="displayName" autoComplete="name" required className={fieldClassName} />
+          <input name="displayName" autoComplete="name" defaultValue={user?.name} minLength={2} required className={fieldClassName} />
         </label>
         <label className="block min-w-0 text-xs">
           <span className="mb-1 block">Nome de usuário<span className="text-[#D28A4C]">*</span></span>
-          <input name="username" autoComplete="username" required className={fieldClassName} />
+          <input name="username" autoComplete="username" defaultValue={user?.username} minLength={3} required className={fieldClassName} />
         </label>
 
         <label className="block min-w-0 text-xs">
           <span className="mb-1 block">Rede <span className="text-[#D28A4C]">*</span></span>
-          <select name="network" required defaultValue="" className={`${fieldClassName} text-[#B39463]`}>
+          <select key={selectedWallet} name="network" required defaultValue={wallets.find((wallet) => wallet.address === selectedWallet)?.network ?? ''} className={`${fieldClassName} text-[#B39463]`}>
             <option value="" disabled>Selecione uma rede</option>
             {profileNetworks.map((network) => <option key={network}>{network}</option>)}
           </select>
         </label>
         <label className="block min-w-0 text-xs">
           <span className="mb-1 block">Nome do perfil<span className="text-[#D28A4C]">*</span></span>
-          <input name="profileName" required className={fieldClassName} />
+          <input name="profileName" defaultValue={user?.name} required className={fieldClassName} />
         </label>
 
         <label className="block min-w-0 text-xs">
@@ -104,6 +106,7 @@ const CheckoutProfileForm = ({
           <span className="mb-1 block">E-mail<span className="text-[#D28A4C]">*</span></span>
           <input
             name="email"
+            defaultValue={user?.email}
             type="email"
             autoComplete="email"
             required
@@ -115,6 +118,7 @@ const CheckoutProfileForm = ({
           <span className="flex">
             <input
               name="ensName"
+              defaultValue={user?.username}
               required
               className={`${fieldClassName} min-w-0 rounded-r-none border-r-0`}
             />
@@ -147,12 +151,13 @@ const CheckoutProfileForm = ({
           {useAnotherWallet && (
             <label className="mt-3 block text-xs">
               <span className="mb-1 block">Endereço da outra carteira<span className="text-[#D28A4C]">*</span></span>
-              <input
+              <select
                 name="alternateWallet"
                 required
-                placeholder="Endereço 0x da carteira"
+                value={selectedWallet}
+                onChange={(event) => onWalletChange(event.target.value)}
                 className={fieldClassName}
-              />
+              >{wallets.map((wallet) => <option key={wallet.id} value={wallet.address}>{wallet.label} · {wallet.address}</option>)}</select>
             </label>
           )}
         </div>

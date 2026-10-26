@@ -1,6 +1,6 @@
 import { Link } from '@tanstack/react-router';
-import HeroImgDigitalArt from '../../assets/img/nfts/esmeral_ape.png';
-import NomadImg from '../../assets/img/nfts/cosmic_bloom.png';
+import HeroImgDigitalArt from '../../assets/img/nfts/esmeral_ape.webp';
+import NomadImg from '../../assets/img/nfts/cosmic_bloom.webp';
 import { Bitcoin } from 'lucide-react';
 
 const Hero = () => {
@@ -99,7 +99,7 @@ const Hero = () => {
           alt=""
           className="absolute right-[78px] top-[104px] z-10 h-[60px] w-[60px] rounded-full border-2 border-[#3B261B] object-cover"
         />
-        <div aria-label="Slide 1 de 3" className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
+        <div aria-hidden="true" className="absolute bottom-3 left-0 right-0 flex justify-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-[#E89B55]" />
           <span className="h-1.5 w-1.5 rounded-full bg-[#E89B55]" />
           <span className="h-1.5 w-1.5 rounded-full bg-[#E89B55]" />

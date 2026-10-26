@@ -1,6 +1,4 @@
 export const ethUnit = 100_000_000n;
-export const promoCode = 'KURIO10';
-export const networkFee = 1_600_000n;
 
 export const toEthUnits = (value: string) => {
   const [whole, fraction = ''] = value.split('.');

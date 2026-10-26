@@ -1,6 +1,6 @@
 import { io, type Socket } from 'socket.io-client';
 
-export interface NftUpdatedEvent { id: number; price: string; available: number; version: number; userId: string }
+export interface NftUpdatedEvent { id: number; price: string; available: number; version: number; userId: string; editions?: Array<{ name: string; available: number }> }
 export interface OrderUpdatedEvent { orderId: string; userId: string; status: 'pending' | 'confirmed' | 'rejected'; version: number }
 
 let socket: Socket | undefined;

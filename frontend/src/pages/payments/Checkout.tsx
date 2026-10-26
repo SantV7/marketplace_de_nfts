@@ -7,24 +7,40 @@ import { toEthUnits } from '@/pages/cart/cartPricing';
 import CheckoutOrderSummary from './CheckoutOrderSummary';
 import CheckoutMobile from './CheckoutMobile';
 import CheckoutProfileForm from './CheckoutProfileForm';
-import { useCart, useCreateOrder, useOrder, useQuote } from '@/services/queries';
-import { useWallets } from '@/services/queries';
+import { useCart, useCreateOrder, useOrder, useQuote, useSession } from '@/services/queries';
+import { useWallets, useWalletConnection } from '@/services/queries';
 import { api } from '@/services/api';
-import type { Wallet } from '@/services/contracts';
+import type { Order, Wallet } from '@/services/contracts';
 import {
   walletProviders,
   type WalletProviderId,
 } from './paymentData';
 
+import { useQuery } from '@tanstack/react-query';
+import axios from 'axios';
+import { readStored, sessionStorageKey } from '@/services/session';
+import { useMobile } from '@/hooks/useMobile';
+import { PageSkeleton, RequestError } from '@/components/RemoteState';
+
+type OrderAttempt = Parameters<ReturnType<typeof useCreateOrder>['mutateAsync']>[0];
 const noWallets: Wallet[] = [];
 
 const Checkout = () => {
   const { coupon } = useSearch({ from: '/payment' });
   const navigate = useNavigate();
+  const mobile = useMobile();
+  const session = useSession();
+  const attemptKey = sessionStorageKey('kurio-pending-attempt');
+  const draftKey = sessionStorageKey('kurio-checkout-draft');
+  const stateKey = sessionStorageKey('kurio-last-order-state');
+  const [attempt, setAttempt] = useState<OrderAttempt | undefined>(() => readStored<OrderAttempt>(attemptKey));
+  const [recoveredId, setRecoveredId] = useState(() => localStorage.getItem(stateKey) ?? '');
+  const needsReview = useRef(false);
   const cartQuery = useCart();
   const items = cartQuery.data ?? [];
   const quoteQuery = useQuote(coupon);
   const walletsQuery = useWallets();
+  const walletConnection = useWalletConnection();
   const wallets = walletsQuery.data ?? noWallets;
   const createOrder = useCreateOrder();
   const submitLock = useRef(false);
@@ -36,21 +52,57 @@ const Checkout = () => {
   const selectedWallet = selectedWalletAddress || wallets[0]?.address || '';
   const walletConnected = connectedWalletAddress === selectedWallet && Boolean(selectedWallet);
   const [confirmationMessage, setConfirmationMessage] = useState('');
-  const savedOrderKey = localStorage.getItem('kurio-pending-order-key');
-  const recoveredKey = savedOrderKey ? (JSON.parse(savedOrderKey) as { key?: string }).key : undefined;
-  const pendingOrderId = localStorage.getItem('kurio-pending-order-id') ?? (recoveredKey ? `ORD-${recoveredKey.slice(0, 12)}` : '');
-  const pendingOrder = useOrder(pendingOrderId);
+  const attemptQuery = useQuery({
+    queryKey: ['order-attempt', attempt?.key],
+    enabled: Boolean(attempt),
+    queryFn: async ({ signal }) => (await api.get<Order>(`/orders/by-key/${encodeURIComponent(attempt!.key)}`, { signal })).data,
+    retry: false,
+  });
+  const pendingOrder = useOrder(recoveredId || attemptQuery.data?.orderId || '');
+  const rememberAttempt = (value: OrderAttempt | undefined) => {
+    if (value) localStorage.setItem(attemptKey, JSON.stringify(value));
+    else localStorage.removeItem(attemptKey);
+    setAttempt(value);
+  };
+  const finishOrder = async (order: Order) => {
+    setRecoveredId(order.orderId);
+    if (order.status === 'confirmed') {
+      localStorage.removeItem(stateKey);
+      localStorage.removeItem(attemptKey);
+      localStorage.removeItem(draftKey);
+      localStorage.setItem('kurio-order-id', order.orderId);
+      await navigate({ to: '/order-confirmation' });
+    } else {
+      localStorage.setItem(stateKey, order.orderId);
+      if (order.status === 'rejected') rememberAttempt(undefined);
+      setConfirmationMessage(order.status === 'rejected' ? 'Pagamento recusado. O carrinho foi preservado.' : 'Pedido pendente. Consulte novamente em instantes.');
+    }
+  };
+  const saveDraft = (form: HTMLFormElement) => {
+    const draft = Object.fromEntries(new FormData(form).entries());
+    localStorage.setItem(draftKey, JSON.stringify(draft));
+  };
+  const restoreDraft = (form: HTMLFormElement | null) => {
+    if (!form) return;
+    const draft = readStored<Record<string, string>>(draftKey);
+    if (!draft) return;
+    for (const [name, value] of Object.entries(draft)) {
+      if (['walletAddress', 'network', 'walletProvider', 'paymentProvider', 'connectedWallet'].includes(name)) continue;
+      const input = form.elements.namedItem(name);
+      if (input instanceof HTMLInputElement && !['radio', 'checkbox', 'password'].includes(input.type) || input instanceof HTMLTextAreaElement) input.value = value;
+    }
+  };
 
   const handleWalletConnection = async () => {
     const wallet = wallets.find((entry) => entry.address === selectedWallet);
     if (!wallet) return;
     try {
       if (walletConnected) {
-        await api.post(`/wallets/${encodeURIComponent(wallet.id)}/disconnect`);
+        await walletConnection.mutateAsync({ id: wallet.id, connected: true });
         setConnectedWalletAddress('');
         setConfirmationMessage('Carteira desconectada.');
       } else {
-        await api.post(`/wallets/${encodeURIComponent(wallet.id)}/connect`);
+        await walletConnection.mutateAsync({ id: wallet.id, connected: false });
         setConnectedWalletAddress(selectedWallet);
         setConfirmationMessage('Carteira conectada.');
       }
@@ -61,7 +113,7 @@ const Checkout = () => {
   };
 
   useEffect(() => {
-    const onNftUpdated = () => setConfirmationMessage('Preço ou disponibilidade alterados. A cotação foi atualizada; revise antes de confirmar.');
+    const onNftUpdated = () => { needsReview.current = true; setConfirmationMessage('Preço ou disponibilidade alterados. A cotação foi atualizada; revise antes de confirmar.'); };
     window.addEventListener('kurio:nft-updated', onNftUpdated);
     return () => window.removeEventListener('kurio:nft-updated', onNftUpdated);
   }, []);
@@ -69,85 +121,81 @@ const Checkout = () => {
   useEffect(() => {
     const order = pendingOrder.data;
     if (!order || order.status !== 'confirmed') return;
-    localStorage.removeItem('kurio-pending-order-id');
-    localStorage.removeItem('kurio-pending-order-key');
+    localStorage.removeItem(attemptKey);
+    localStorage.removeItem(draftKey);
+    localStorage.removeItem(stateKey);
     localStorage.setItem('kurio-order-id', order.orderId);
     void navigate({ to: '/order-confirmation' });
-  }, [navigate, pendingOrder.data]);
+  }, [navigate, pendingOrder.data, attemptKey, draftKey, stateKey]);
 
   const subtotal = toEthUnits(quoteQuery.data?.subtotal ?? '0');
   const discount = toEthUnits(quoteQuery.data?.discount ?? '0');
   const fee = toEthUnits(quoteQuery.data?.networkFee ?? '0');
   const total = toEthUnits(quoteQuery.data?.total ?? '0');
-  const paymentMessage = confirmationMessage || (pendingOrder.data?.status === 'rejected' ? 'Pagamento recusado. O carrinho foi preservado.' : '');
+  const paymentMessage = confirmationMessage || (pendingOrder.data?.status === 'rejected' ? 'Pagamento recusado. O carrinho foi preservado.' : pendingOrder.data?.status === 'pending' ? 'Pedido pendente. Consulte novamente em instantes.' : quoteQuery.isError ? 'Não foi possível validar a cotação. Revise a disponibilidade e o cupom no carrinho.' : '');
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
-    if (items.length === 0) return;
-    if (!wallets.length || !walletConnected) {
+    saveDraft(event.currentTarget);
+    if (submitLock.current || createOrder.isPending) return;
+    if (!attempt && (!wallets.length || !walletConnected)) {
       setConfirmationMessage('Selecione e conecte uma carteira cadastrada antes de confirmar.');
       return;
     }
-
-    if (submitLock.current || createOrder.isPending) return;
     submitLock.current = true;
     try {
-      const previousQuote = quoteQuery.data;
-      const [freshCart, freshQuote] = await Promise.all([cartQuery.refetch(), quoteQuery.refetch()]);
-      const currentItems = freshCart.data ?? [];
-      const currentQuote = freshQuote.data;
-      if (!currentQuote || currentItems.length === 0) {
-        setConfirmationMessage('Não foi possível validar o carrinho e a cotação. Tente novamente.');
+      if (attempt) {
+        await finishOrder(await createOrder.mutateAsync(attempt));
         return;
       }
-      const quoteChanged = previousQuote && (previousQuote.total !== currentQuote.total || previousQuote.version !== currentQuote.version);
-      const itemsChanged = JSON.stringify(items) !== JSON.stringify(currentItems);
-      if (quoteChanged || itemsChanged || new Date(currentQuote.expiresAt).getTime() <= Date.now()) {
+      const previousQuote = quoteQuery.data;
+      const [freshCart, freshQuote, freshWallets] = await Promise.all([cartQuery.refetch(), quoteQuery.refetch(), walletsQuery.refetch()]);
+      const currentItems = freshCart.data ?? [];
+      const currentQuote = freshQuote.data;
+      if (freshCart.isError || freshQuote.isError || freshWallets.isError || !currentQuote || currentItems.length === 0) {
+        setConfirmationMessage('Não foi possível validar o carrinho e a cotação. Verifique disponibilidade e cupom e tente novamente.');
+        return;
+      }
+      const quoteSignature = (quote: typeof currentQuote | undefined) => quote && JSON.stringify([quote.version, quote.total, quote.subtotal, quote.discount, quote.networkFee, quote.coupon]);
+      if (needsReview.current || quoteSignature(previousQuote) !== quoteSignature(currentQuote) || JSON.stringify(items) !== JSON.stringify(currentItems) || Date.parse(currentQuote.expiresAt) <= Date.now()) {
+        needsReview.current = false;
         setConfirmationMessage('A cotação foi atualizada. Revise os valores e confirme novamente.');
         return;
       }
-      const input = { items: currentItems, total: currentQuote.total, discount: currentQuote.discount, networkFee: currentQuote.networkFee, coupon: currentQuote.coupon, quoteVersion: currentQuote.version, quoteExpiresAt: currentQuote.expiresAt, wallet: String(form.get('walletAddress') ?? selectedWallet), provider: selectedProvider, network: String(form.get('network') ?? 'Ethereum') };
-      const fingerprint = JSON.stringify({ items: input.items, total: input.total, discount: input.discount, networkFee: input.networkFee, coupon: input.coupon, quoteVersion: input.quoteVersion, wallet: input.wallet, provider: input.provider, network: input.network });
-      const saved = localStorage.getItem('kurio-pending-order-key');
-      const savedTransaction = saved ? JSON.parse(saved) as { key: string; fingerprint: string } : undefined;
-      const key = savedTransaction?.fingerprint === fingerprint ? savedTransaction.key : crypto.randomUUID();
-      localStorage.setItem('kurio-pending-order-key', JSON.stringify({ key, fingerprint }));
-      let response;
-      try {
-        response = await createOrder.mutateAsync({ key, input });
-      } catch {
-        const recovery = await cartQuery.refetch().catch(() => undefined);
-        void recovery;
-        setConfirmationMessage('A resposta do pagamento não chegou. A tentativa foi guardada; confirme novamente para recuperar o mesmo pedido.');
+      const wallet = freshWallets.data?.find((entry) => entry.address === selectedWallet);
+      const network = String(form.get('network') ?? wallet?.network ?? '');
+      if (!wallet || wallet.network !== network) {
+        setConfirmationMessage('Selecione a rede correspondente à carteira cadastrada.');
         return;
       }
-      if (response.status !== 'confirmed') {
-        if (response.status === 'pending') localStorage.setItem('kurio-pending-order-id', response.orderId);
-        if (response.status === 'rejected') localStorage.removeItem('kurio-pending-order-key');
-        setConfirmationMessage(response.status === 'rejected' ? 'Pagamento recusado. O carrinho foi preservado.' : 'Pedido pendente. Consulte novamente em instantes.');
-        return;
-      }
-      localStorage.removeItem('kurio-pending-order-key');
-      localStorage.removeItem('kurio-pending-order-id');
-      localStorage.setItem('kurio-order-id', response.orderId);
-      localStorage.setItem('kurio-order-snapshot', JSON.stringify({ ...response, wallet: input.wallet, provider: input.provider, network: input.network }));
-      await navigate({ to: '/order-confirmation' });
+      const input = { items: currentItems, total: currentQuote.total, discount: currentQuote.discount, networkFee: currentQuote.networkFee, coupon: currentQuote.coupon, quoteVersion: currentQuote.version, quoteExpiresAt: currentQuote.expiresAt, wallet: wallet.address, provider: selectedProvider, network };
+      const transaction = { key: crypto.randomUUID(), input };
+      setRecoveredId('');
+      localStorage.removeItem(stateKey);
+      rememberAttempt(transaction);
+      await finishOrder(await createOrder.mutateAsync(transaction));
     } catch (error) {
-      console.error('Não foi possível criar a prévia do recibo.', error);
-      setConfirmationMessage(
-        'Não foi possível abrir a confirmação demonstrativa. Tente novamente.',
-      );
+      if (axios.isAxiosError(error) && error.response) {
+        if (error.response.status >= 400 && error.response.status < 500 && error.response.status !== 401) rememberAttempt(undefined);
+        setConfirmationMessage(error.response.status === 409 ? 'A compra mudou. Revise o carrinho e confirme novamente.' : 'Não foi possível validar o pagamento. Tente novamente.');
+      } else {
+        setConfirmationMessage('A resposta do pagamento não chegou. A tentativa foi guardada; confirme novamente para recuperar o mesmo pedido.');
+      }
     } finally {
       submitLock.current = false;
     }
   };
 
+  if (cartQuery.isLoading || walletsQuery.isLoading || quoteQuery.isLoading) return <PageSkeleton label="Carregando pagamento…" summary />;
+  if (cartQuery.isError || walletsQuery.isError) return <RequestError message="Não foi possível carregar o pagamento." retry={() => { void cartQuery.refetch(); void walletsQuery.refetch(); }} />;
+
   return (
-    <div className="min-h-screen bg-[#140D0A] font-mono text-[#F5F1EB]">
-      <div className="hidden md:block">
+    <div aria-busy={quoteQuery.isFetching || createOrder.isPending} className="min-h-screen bg-[#140D0A] font-mono text-[#F5F1EB]">
+      {!mobile && <div>
         <Navbar />
         <main className="mx-auto max-w-300 px-4 pb-14 pt-6 sm:px-6 lg:px-10">
+          <h1 className="sr-only">Pagamento</h1>
           <nav aria-label="Navegação estrutural" className="mb-6 text-xs text-[#F5F1EB]">
             <Link to="/" className="transition-colors hover:text-[#D28A4C]">Início</Link>
             <span className="px-2">/</span>
@@ -159,9 +207,10 @@ const Checkout = () => {
           {items.length === 0 ? (
             <EmptyCheckout />
           ) : (
-            <form onSubmit={handleSubmit} onChange={() => setConfirmationMessage('')}>
+            <form ref={restoreDraft} onSubmit={handleSubmit} onChange={(event) => saveDraft(event.currentTarget)}>
               <div className="grid items-start gap-10 lg:grid-cols-[minmax(0,1fr)_320px] xl:gap-12">
                 <CheckoutProfileForm
+                  user={session.data?.user}
                   selectedProvider={selectedProvider}
                   onProviderChange={setSelectedProvider}
                   wallets={wallets}
@@ -187,10 +236,17 @@ const Checkout = () => {
           )}
         </main>
         <Footer />
-      </div>
+      </div>}
 
-      {items.length > 0 ? (
+      {mobile && (items.length > 0 ? (
         <CheckoutMobile
+          items={items}
+          subtotal={subtotal}
+          discount={discount}
+          fee={fee}
+          user={session.data?.user}
+          formRef={restoreDraft}
+          onFormChange={saveDraft}
           total={total}
           selectedProvider={selectedProvider}
           selectedWallet={selectedWallet}
@@ -206,7 +262,7 @@ const Checkout = () => {
         <main className="px-4 py-10 md:hidden">
           <EmptyCheckout />
         </main>
-      )}
+      ))}
     </div>
   );
 };

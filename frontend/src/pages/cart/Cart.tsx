@@ -1,21 +1,27 @@
-import { useState } from 'react';
+import { PageSkeleton, RequestError } from '@/components/RemoteState';
+import { useMobile } from '@/hooks/useMobile';
+import { useEffect, useState } from 'react';
 import { Link } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Footer from '@/components/footer/Footer';
 import Navbar from '@/components/navbar/Navbar';
-import { useCart, useQuote, useRemoveCartItem, useUpdateCartItem } from '@/services/queries';
+import { useCart, useQuote, useValidateCoupon, useRemoveCartItem, useUpdateCartItem } from '@/services/queries';
 import CartItemList from './CartItemList';
 import CartRecommendations from './CartRecommendations';
 import CartSummary from './CartSummary';
 import { toEthUnits } from './cartPricing';
 
 const Cart = () => {
+  const mobile = useMobile();
   const cartQuery = useCart();
+  const [realtimeMessage, setRealtimeMessage] = useState('');
+  useEffect(() => { const notify = () => setRealtimeMessage('Preço ou disponibilidade alterados. Confira os valores atualizados.'); window.addEventListener('kurio:nft-updated', notify); return () => window.removeEventListener('kurio:nft-updated', notify); }, []);
   const items = cartQuery.data ?? [];
   const updateItem = useUpdateCartItem();
   const removeItem = useRemoveCartItem();
-  const [coupon, setCoupon] = useState('');
-  const [appliedCoupon, setAppliedCoupon] = useState(false);
+  const validateCoupon = useValidateCoupon();
+  const [coupon, setCoupon] = useState(() => localStorage.getItem('kurio-cart-coupon') ?? '');
+  const [appliedCoupon, setAppliedCoupon] = useState(() => Boolean(localStorage.getItem('kurio-cart-coupon')));
   const [couponMessage, setCouponMessage] = useState('');
   const [cartActionError, setCartActionError] = useState('');
 
@@ -46,14 +52,17 @@ const Cart = () => {
   };
 
   const handleCouponChange = (value: string) => {
+    localStorage.removeItem('kurio-cart-coupon');
     setCoupon(value);
     setAppliedCoupon(false);
     setCouponMessage('');
   };
 
   const handleApplyCoupon = async () => {
+    if (!coupon.trim()) { setCouponMessage('Cupom inválido: informe um código.'); return; }
     try {
-      await import('@/services/api').then(({ api }) => api.post('/quotes', { coupon: coupon.trim().toUpperCase() }));
+      await validateCoupon.mutateAsync(coupon.trim().toUpperCase());
+      localStorage.setItem('kurio-cart-coupon', coupon.trim().toUpperCase());
       setAppliedCoupon(true);
       setCouponMessage('Cupom aplicado à cotação.');
     } catch {
@@ -63,14 +72,16 @@ const Cart = () => {
   };
 
   const handleRemoveCoupon = () => {
+    localStorage.removeItem('kurio-cart-coupon');
     setAppliedCoupon(false);
     setCouponMessage('Cupom removido.');
   };
 
-  if (cartQuery.isLoading) return <main role="status" className="min-h-svh animate-pulse bg-[#140D0A] p-10 text-[#CFB28C]">Carregando carrinho…</main>;
+  if (cartQuery.isLoading) return <PageSkeleton label="Carregando carrinho…" summary />;
+  if (cartQuery.isError) return <RequestError message="Não foi possível carregar o carrinho." retry={() => void cartQuery.refetch()} />;
   return (
     <div className="min-h-screen bg-[#140D0A] font-mono text-[#F5F1EB]">
-      <div className="hidden md:block">
+      {!mobile && <div>
         <Navbar />
         <main className="mx-auto max-w-360 px-4 py-8 sm:px-6 lg:px-12 xl:px-20">
           <nav aria-label="Navegação estrutural" className="mb-8 text-xs text-[#F5F1EB]">
@@ -97,6 +108,9 @@ const Cart = () => {
                 coupon={coupon}
                 appliedCoupon={appliedCoupon}
                 couponMessage={couponMessage}
+                loading={quoteQuery.isFetching || updateItem.isPending}
+                error={quoteQuery.isError}
+                onRetry={() => void quoteQuery.refetch()}
                 subtotal={subtotal}
                 discount={discount}
                 fee={fee}
@@ -111,9 +125,9 @@ const Cart = () => {
           <CartRecommendations />
         </main>
         <Footer />
-      </div>
+      </div>}
 
-      <main className="mx-auto flex min-h-svh w-full max-w-[390px] flex-col bg-[#140D0A] px-6 pb-0 pt-[25px] md:hidden">
+      {mobile && <main className="mx-auto flex min-h-svh w-full max-w-[390px] flex-col bg-[#140D0A] px-6 pb-0 pt-[25px] md:hidden">
         <header className="mb-4 grid grid-cols-[32px_1fr_32px] items-center">
           <Link
             to="/market"
@@ -140,6 +154,9 @@ const Cart = () => {
               coupon={coupon}
               appliedCoupon={appliedCoupon}
               couponMessage={couponMessage}
+                loading={quoteQuery.isFetching || updateItem.isPending}
+                error={quoteQuery.isError}
+                onRetry={() => void quoteQuery.refetch()}
               subtotal={subtotal}
               discount={discount}
               fee={fee}
@@ -150,7 +167,8 @@ const Cart = () => {
             />
           </div>
         )}
-      </main>
+      </main>}
+      {realtimeMessage && <p role="status" className="p-4 text-center">{realtimeMessage}</p>}
     </div>
   );
 };

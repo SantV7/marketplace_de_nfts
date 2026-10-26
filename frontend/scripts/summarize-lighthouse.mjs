@@ -30,7 +30,9 @@ for (const page of config.pages) {
 }
 
 const firstReport = JSON.parse(await readFile(path.join(output, `${config.pages[0].name}-${config.profiles[0].name}-run-1.json`), 'utf8'));
+const previous = await readFile(path.join(output, 'summary.json'), 'utf8').then(JSON.parse).catch(() => ({}));
 await writeFile(path.join(output, 'summary.json'), JSON.stringify({
+  ...previous,
   generatedAt: new Date().toISOString(),
   lighthouseVersion: firstReport.lighthouseVersion,
   chromeVersion: firstReport.userAgent,

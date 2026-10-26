@@ -1,3 +1,5 @@
+import axios from 'axios';
+import { PageSkeleton, RequestError } from '@/components/RemoteState';
 import { useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import Footer from '@/components/footer/Footer';
@@ -32,19 +34,21 @@ const ProductDetailContent = ({ id }: { id: string }) => {
   const isFavorite = favoritesQuery.data?.includes(Number(id)) ?? false;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  if (nftQuery.isLoading) return <div role="status" className="min-h-svh animate-pulse bg-[#140D0A] p-10 text-[#CFB28C]">Carregando NFT…</div>;
+  if (nftQuery.isLoading) return <PageSkeleton label="Carregando NFT…" />;
+  if (nftQuery.isError && !(axios.isAxiosError(nftQuery.error) && nftQuery.error.response?.status === 404)) return <RequestError message="Não foi possível carregar o NFT." retry={() => void nftQuery.refetch()} />;
   if (nftQuery.isError || !nftData) return <NftNotFound id={id} />;
 
   const formattedId = String(id).padStart(3, '0');
   const detailData: NftDetail = {
-    id: String(nftData.id), name: nftData.name, price: nftData.price, rating: nftData.rating ?? 5,
+    reviews: nftData.reviews ?? [],
+    id: String(nftData.id), name: nftData.name, price: nftData.price, rating: nftData.rating ?? 0,
     description: nftData.description ?? '', editions: nftData.editions?.map((row) => row.name) ?? [nftData.edition],
     tokenId: nftData.tokenId ?? String(nftData.id).padStart(3, '0'), collection: nftData.collection ?? '',
     attributes: nftData.attributes ?? [], thumbnails: nftData.thumbnails ?? [nftData.image],
     contractAddress: nftData.contractAddress ?? '', blockchain: nftData.blockchain ?? nftData.network, royalty: nftData.royalty ?? '0%',
   };
   const baseImage = detailData.thumbnails[0];
-  const availableQuantity = nftData.editions?.find((edition) => edition.name === selectedEdition)?.available ?? nftData.available;
+  const availableQuantity = Math.min(nftData.available, nftData.editions?.find((edition) => edition.name === selectedEdition)?.available ?? nftData.available);
 
   const handleAddToCart = async () => {
     setCartError('');
@@ -73,11 +77,12 @@ const ProductDetailContent = ({ id }: { id: string }) => {
   const handleSelectEdition = (edition: string) => {
     setSelectedEdition(edition);
     setQuantity((currentQuantity) =>
-      Math.min(currentQuantity, nftData.editions?.find((row) => row.name === edition)?.available ?? 1),
+      Math.max(1, Math.min(currentQuantity, nftData.editions?.find((row) => row.name === edition)?.available ?? 1)),
     );
   };
 
   const handleToggleFavorite = async () => {
+    if (!localStorage.getItem('kurio_token')) { void navigate({ to: '/login', search: { redirect: `/nft/${id}` } }); return; }
     try {
       await toggleFavorite.mutateAsync({ id: Number(id), active: isFavorite });
       setFavoriteError('');
@@ -97,6 +102,7 @@ const ProductDetailContent = ({ id }: { id: string }) => {
         formattedId={formattedId}
         baseImage={baseImage}
         selectedStyle={selectedStyle}
+        onSelectStyle={setSelectedStyle}
         selectedEdition={selectedEdition}
         quantity={quantity}
         availableQuantity={availableQuantity}
@@ -108,7 +114,7 @@ const ProductDetailContent = ({ id }: { id: string }) => {
         onToggleFavorite={handleToggleFavorite}
       />
 
-      <div className="hidden md:block">
+      <main className="hidden md:block">
         <div className="mx-auto max-w-360 px-4 pt-6 pb-16 font-mono text-[#F5F1EB] lg:px-27.5">
           <nav className="mb-6 text-xs leading-4 text-[#CFB28C]">
             <span>Início</span> / <span>Mercado</span> /{' '}
@@ -146,10 +152,10 @@ const ProductDetailContent = ({ id }: { id: string }) => {
             styleLabel={selectedStyle.label}
             selectedEdition={selectedEdition}
           />
-          <RelatedNfts />
+          <RelatedNfts excludeId={id} />
         </div>
         <Footer />
-      </div>
+      </main>
     </div>
   );
 };

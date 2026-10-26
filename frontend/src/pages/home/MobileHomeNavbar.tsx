@@ -91,7 +91,8 @@ const MobileHomeNavbar = () => {
           <HomeIcon />
         </Link>
         <Link
-          to="/login"
+          to="/profile"
+          hash="favorites"
           aria-label="Favoritos"
           className="flex h-12 w-12 items-center justify-center"
         >
@@ -171,7 +172,7 @@ const MobileHomeNavbar = () => {
           )}
         </Link>
         <Link
-          to="/login"
+          to="/profile"
           aria-label="Perfil"
           className="flex h-12 w-12 items-center justify-center"
         >

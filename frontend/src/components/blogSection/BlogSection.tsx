@@ -1,7 +1,8 @@
-import cosmicBloom from '@/assets/img/nfts/cosmic_bloom.png';
-import esmeralApe from '@/assets/img/nfts/esmeral_ape.png';
-import brownNft from '@/assets/img/nfts/brown_nft.png';
-import goldenBeat from '@/assets/img/nfts/golden_beat.png';
+import { Link } from '@tanstack/react-router';
+import cosmicBloom from '@/assets/img/nfts/cosmic_bloom.webp';
+import esmeralApe from '@/assets/img/nfts/esmeral_ape.webp';
+import brownNft from '@/assets/img/nfts/brown_nft.webp';
+import goldenBeat from '@/assets/img/nfts/golden_beat.webp';
 
 const blogPosts = [
   {
@@ -55,6 +56,7 @@ const BlogSection = () => {
             className="flex flex-col rounded-2xl bg-[#231712] p-4 border border-transparent transition-all duration-300 hover:border-[#D28A4C] hover:scale-[1.02] cursor-pointer"
           >
             <img
+              loading="lazy"
               src={post.image}
               alt={post.title}
               className="mb-4 aspect-4/3 w-full rounded-xl object-cover"
@@ -64,9 +66,9 @@ const BlogSection = () => {
             </div>
             <h3 className="mt-2 text-[16px] font-bold leading-5.5 text-[#F5F1EB]">{post.title}</h3>
             <p className="mt-1 text-[12px] leading-4.5 text-[#CFB28C] line-clamp-2">{post.description}</p>
-            <span className="mt-4 text-[12px] font-bold leading-3.5 text-[#D28A4C] hover:underline">
+            <Link to="/learn" className="mt-4 text-[12px] font-bold leading-3.5 text-[#D28A4C] hover:underline">
               Ler mais →
-            </span>
+            </Link>
           </article>
         ))}
       </div>

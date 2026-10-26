@@ -5,11 +5,15 @@ import { api } from '@/services/api';
 import type { Session } from '@/services/contracts';
 import { validateCatalogSearch } from './catalogSearch';
 import { redirect } from '@tanstack/react-router';
+import axios from 'axios';
+import { Link } from '@tanstack/react-router';
 
 const Auth = lazy(() => import('@/pages/auth/Auth'));
-const Home = lazy(() => import('@/pages/home/Home'));
+const loadHome = () => import('@/pages/home/Home');
+const Home = lazy(loadHome);
 const Market = lazy(() => import('@/pages/home/Market'));
-const ProductDetail = lazy(() => import('@/pages/nftDetails/ProductDetail'));
+const loadProductDetail = () => import('@/pages/nftDetails/ProductDetail');
+const ProductDetail = lazy(loadProductDetail);
 const Cart = lazy(() => import('@/pages/cart/Cart'));
 const Checkout = lazy(() => import('@/pages/payments/Checkout'));
 const OrderReceiptRoute = lazy(() => import('@/pages/payments/OrderReceiptRoute'));
@@ -17,8 +21,16 @@ const ProfilePage = lazy(() => import('@/pages/profile/AccountPages').then((modu
 const WalletsPage = lazy(() => import('@/pages/profile/AccountPages').then((module) => ({ default: module.WalletsPage })));
 const PageFallback = () => <div role="status" className="min-h-svh animate-pulse bg-[#140D0A]" />;
 
+export const preloadInitialRoute = () => {
+  if (window.location.pathname === '/') return loadHome();
+  if (window.location.pathname.startsWith('/nft/')) return loadProductDetail();
+  return Promise.resolve();
+};
+
 const rootRoute = createRootRoute({
   validateSearch: validateCatalogSearch,
+  notFoundComponent: () => <main className="min-h-svh bg-[#140D0A] p-10 text-[#F5F1EB]"><h1>Página não encontrada</h1><Link to="/">Voltar ao início</Link></main>,
+  errorComponent: ({ reset }) => <main className="min-h-svh bg-[#140D0A] p-10 text-[#F5F1EB]"><h1>Não foi possível carregar esta página</h1><button onClick={reset}>Tentar novamente</button></main>,
 });
 
 const requireSession = async ({ location }: { location: { href: string } }) => {
@@ -27,9 +39,9 @@ const requireSession = async ({ location }: { location: { href: string } }) => {
   }
   try {
     await api.get<Session>('/auth/session');
-  } catch {
-    localStorage.removeItem('kurio_token');
-    throw redirect({ to: '/login', search: { redirect: location.href } });
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 401) throw redirect({ to: '/login', search: { redirect: location.href } });
+    throw error;
   }
 };
 
@@ -55,13 +67,13 @@ const marketRoute = createRoute({
 const creatorsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/creators',
-  component: () => <Navbar />,
+  component: () => <><Navbar /><main className="min-h-svh bg-[#140D0A] p-10 text-[#F5F1EB]"><h1>Criadores</h1><p>Conteúdo editorial fora do escopo desta demonstração.</p><Link to="/market">Explorar NFTs</Link></main></>,
 });
 
 const learnRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/learn',
-  component: () => <Navbar />,
+  component: () => <><Navbar /><main className="min-h-svh bg-[#140D0A] p-10 text-[#F5F1EB]"><h1>Aprender</h1><p>Conteúdo editorial fora do escopo desta demonstração.</p><Link to="/market">Explorar NFTs</Link></main></>,
 });
 
 const cartRoute = createRoute({

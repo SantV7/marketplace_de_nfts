@@ -1,4 +1,5 @@
-import { X, ZoomIn } from 'lucide-react';
+import { Dialog, DialogContent, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { ZoomIn } from 'lucide-react';
 import { nftStyles } from './productDetailContent';
 
 type NftStyle = (typeof nftStyles)[number];
@@ -20,7 +21,7 @@ const NftGallery = ({
   onSelectStyle,
   onModalOpenChange,
 }: NftGalleryProps) => (
-  <>
+  <Dialog open={isModalOpen} onOpenChange={onModalOpenChange}>
     <div className="flex gap-4 lg:col-span-5">
       <div className="flex flex-col gap-3">
         {nftStyles.map((style) => (
@@ -52,39 +53,21 @@ const NftGallery = ({
           style={{ filter: selectedStyle.filter }}
           className="h-full w-full object-cover aspect-square transition-all duration-300"
         />
-        <button
+        <DialogTrigger asChild><button
           type="button"
-          onClick={() => onModalOpenChange(true)}
           className="absolute right-3 top-3 rounded-lg bg-[#140D0A]/80 p-2 text-[#D28A4C] transition-colors hover:bg-[#140D0A] cursor-pointer"
           title="Ampliar imagem"
         >
           <ZoomIn className="h-4 w-4" />
-        </button>
+        </button></DialogTrigger>
       </div>
     </div>
 
-    {isModalOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
-        <div className="relative max-w-2xl w-full bg-[#231712] p-4 rounded-3xl border border-[#3D2C24]">
-          <button
-            onClick={() => onModalOpenChange(false)}
-            className="absolute right-4 top-4 text-[#CFB28C] hover:text-[#F5F1EB] bg-[#140D0A] p-2 rounded-lg cursor-pointer"
-          >
-            <X className="h-5 w-5" />
-          </button>
-          <h3 className="text-sm font-bold text-[#F5F1EB] mb-4">
-            Visualização Expandida - {nftName} ({selectedStyle.label})
-          </h3>
-          <img
-            src={baseImage}
-            alt="Zoom NFT"
-            style={{ filter: selectedStyle.filter }}
-            className="w-full h-auto max-h-[70vh] object-contain rounded-2xl"
-          />
-        </div>
-      </div>
-    )}
-  </>
+    <DialogContent aria-describedby={undefined}>
+      <DialogTitle className="mb-4 pr-10 text-sm font-bold">Visualização Expandida - {nftName} ({selectedStyle.label})</DialogTitle>
+      <img src={baseImage} alt={nftName} style={{ filter: selectedStyle.filter }} className="h-auto max-h-[70vh] w-full rounded-2xl object-contain" />
+    </DialogContent>
+  </Dialog>
 );
 
 export default NftGallery;

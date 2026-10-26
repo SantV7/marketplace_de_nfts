@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Star } from 'lucide-react';
 import type { NftDetail } from './productDetailData';
-import { collectorReviews, totalReviews } from './productDetailContent';
+
 
 type DetailTab = 'details' | 'reviews';
 
@@ -43,7 +43,7 @@ const NftDetailsTabs = ({
               : 'text-[#CFB28C] hover:text-[#F5F1EB]'
           }`}
         >
-          Avaliações de colecionadores ({totalReviews})
+          Avaliações de colecionadores ({nftData.reviews.length})
         </button>
       </div>
 
@@ -83,9 +83,9 @@ const NftDetailsTabs = ({
         ) : (
           <div className="space-y-4">
             <p className="text-[12px] text-[#8C7A6B]">
-              Exibindo todas as {totalReviews} avaliações de colecionadores.
+              Exibindo todas as {nftData.reviews.length} avaliações de colecionadores.
             </p>
-            {collectorReviews.map((review) => (
+            {nftData.reviews.map((review) => (
               <article
                 key={review.name}
                 className="rounded-2xl border border-[#3D2C24] bg-[#231712] p-4"

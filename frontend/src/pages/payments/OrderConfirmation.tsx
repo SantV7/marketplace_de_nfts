@@ -210,8 +210,8 @@ const OrderConfirmation = ({ receipt, onClose }: OrderConfirmationProps) => {
           </dl>
 
           <p className="mx-auto mt-4 max-w-[490px] text-center text-xs leading-[22px] text-[#B39463] sm:text-sm">
-            Esta é uma confirmação simulada na rede {receipt.network}. Seus NFTs
-            continuam no carrinho; nenhum pagamento ou transferência foi realizado.
+            Pedido confirmado na simulação da rede {receipt.network}. Os itens comprados
+            foram removidos do carrinho. A transação e o endereço do explorador são fictícios.
           </p>
           <a
             href={receipt.explorerUrl}

@@ -1,7 +1,7 @@
 import { useNavigate } from '@tanstack/react-router';
 import { Heart, Minus, Plus, Star } from 'lucide-react';
 import type { NftDetail } from './productDetailData';
-import { totalReviews, type nftStyles } from './productDetailContent';
+import { nftStyles } from './productDetailContent';
 
 type NftStyle = (typeof nftStyles)[number];
 
@@ -10,6 +10,7 @@ interface NftMobileDetailProps {
   formattedId: string;
   baseImage: string;
   selectedStyle: NftStyle;
+  onSelectStyle: (style: NftStyle) => void;
   selectedEdition: string;
   quantity: number;
   availableQuantity: number;
@@ -26,6 +27,7 @@ const NftMobileDetail = ({
   formattedId,
   baseImage,
   selectedStyle,
+  onSelectStyle,
   selectedEdition,
   quantity,
   availableQuantity,
@@ -71,6 +73,9 @@ const NftMobileDetail = ({
           className="aspect-square w-full rounded-t-[24px] object-cover"
         />
 
+        <div className="flex gap-3 bg-[#241612] p-3" role="group" aria-label="Vistas da galeria">
+          {nftStyles.map((style) => <button key={style.id} type="button" aria-label={`Ver estilo ${style.label}`} aria-pressed={style.id === selectedStyle.id} onClick={() => onSelectStyle(style)} className="h-12 w-12 overflow-hidden rounded-lg border border-[#D28A4C]"><img src={baseImage} alt="" style={{ filter: style.filter }} className="h-full w-full object-cover" /></button>)}
+        </div>
         <div className="relative -mt-1 rounded-t-[24px] bg-[#241612] px-5 pb-5 pt-7">
           <div className="flex items-center justify-between gap-2">
             <h1 className="min-w-0 truncate text-xl font-bold leading-6 text-[#F5F1EB]">
@@ -78,7 +83,7 @@ const NftMobileDetail = ({
             </h1>
             <span className="flex shrink-0 items-center gap-1 rounded-full border border-[#D28A4C] px-2 py-1 text-[13px] leading-4 text-[#CFB28C]">
               <Star className="h-4 w-4 fill-[#D28A4C] text-[#D28A4C]" aria-hidden="true" />
-              {nftData.rating.toFixed(1)} ({totalReviews})
+              {nftData.rating.toFixed(1)} ({nftData.reviews.length})
             </span>
           </div>
 
@@ -89,6 +94,7 @@ const NftMobileDetail = ({
 
           <div className="mt-4">
             <h2 className="text-[15px] font-bold leading-4 text-[#F5F1EB]">Edição:</h2>
+            {availableQuantity === 0 && <p role="status">Edição esgotada.</p>}
             <div className="mt-2 flex flex-wrap gap-2">
               {nftData.editions.map((edition) => (
                 <button
@@ -149,6 +155,7 @@ const NftMobileDetail = ({
               <button
                 type="button"
                 onClick={onAddToCart}
+                disabled={availableQuantity < 1 || quantity > availableQuantity}
                 className="flex h-[60px] w-[196px] max-w-[calc(100%-70px)] items-center justify-center rounded-[40px] bg-[linear-gradient(93deg,#D28A4C_-3.96%,rgba(210,138,76,0.8)_121%)] px-5 text-[15px] font-bold text-[#140D0A] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#F5F1EB]"
               >
                 Comprar NFT
@@ -156,6 +163,7 @@ const NftMobileDetail = ({
               <button
                 type="button"
                 onClick={onAddToCart}
+                disabled={availableQuantity < 1 || quantity > availableQuantity}
                 aria-label="Adicionar NFT ao carrinho"
                 className="flex h-[60px] w-[60px] shrink-0 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#D28A4C]"
               >

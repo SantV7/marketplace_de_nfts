@@ -67,7 +67,7 @@ const CheckoutOrderSummary = ({
         to="/cart"
         className="block text-center text-[#F5F1EB] transition-colors hover:text-[#D28A4C]"
       >
-        {couponApplied ? 'Cupom KURIO10 aplicado' : 'Tem um código promocional? Aplique aqui'}
+        {couponApplied ? 'Cupom aplicado à cotação' : 'Tem um código promocional? Aplique aqui'}
       </Link>
       <dl className="space-y-2">
         <div className="flex justify-between gap-3">

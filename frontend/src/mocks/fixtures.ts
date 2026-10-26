@@ -1,7 +1,7 @@
-import brownNft from '@/assets/img/nfts/brown_nft.png';
-import cosmicBloom from '@/assets/img/nfts/cosmic_bloom.png';
-import emeraldApe from '@/assets/img/nfts/esmeral_ape.png';
-import goldenBeat from '@/assets/img/nfts/golden_beat.png';
+import brownNft from '@/assets/img/nfts/brown_nft.webp';
+import cosmicBloom from '@/assets/img/nfts/cosmic_bloom.webp';
+import emeraldApe from '@/assets/img/nfts/esmeral_ape.webp';
+import goldenBeat from '@/assets/img/nfts/golden_beat.webp';
 import type { Nft } from '@/services/contracts';
 
 export const mockNfts: Nft[] = [
@@ -24,7 +24,27 @@ export const mockNfts: Nft[] = [
   { id: 963, name: 'Midnight Muse', price: '1.69', image: brownNft, category: 'Arte digital', network: 'Solana', isNew: true, isTrending: false, previousPrice: undefined, edition: '1/50', available: 13 },
   { id: 174, name: 'Golden Reverie', price: '1.29', image: goldenBeat, category: 'Generativa', network: 'Polygon', isNew: false, isTrending: false, previousPrice: undefined, edition: '1/50', available: 19 },
 ];
-const defaultNfts = mockNfts.map((nft) => ({ ...nft }));
+export const collectorReviews = [
+  {
+    name: 'Marina Costa',
+    date: '12 out, 2026',
+    comment: 'A arte tem muitos detalhes de perto. A esmeralda e os óculos ficaram incríveis nessa edição.',
+  },
+  {
+    name: 'Lucas Almeida',
+    date: '08 out, 2026',
+    comment: 'Uma das peças mais marcantes da coleção. Gostei bastante da paleta de cores e do acabamento.',
+  },
+  {
+    name: 'Rafaela Santos',
+    date: '01 out, 2026',
+    comment: 'Ótimo NFT para quem acompanha a Kurio Editions. A imagem em alta resolução faz diferença.',
+  },
+];
+
+
+for (const nft of mockNfts) nft.reviews = structuredClone(collectorReviews);
+const defaultNfts = structuredClone(mockNfts);
 
 export interface MockUser { id: string; email: string; password?: string; passwordHash?: string; name: string; username: string }
 
@@ -123,8 +143,11 @@ export const resetMockState = () => {
   mockSessions.clear();
   mockUserCarts.clear();
   mockUsers.splice(0, mockUsers.length, ...defaultUsers.map((user) => ({ ...user })));
-  mockNfts.splice(0, mockNfts.length, ...defaultNfts.map((nft) => ({ ...nft })));
+  mockNfts.splice(0, mockNfts.length, ...structuredClone(defaultNfts));
+  localStorage.removeItem('kurio_mock_scenario');
   localStorage.removeItem(storageKey);
+  for (const key of Object.keys(localStorage)) if (key.startsWith('kurio_') || key.startsWith('kurio-')) localStorage.removeItem(key);
+  window.dispatchEvent(new Event('kurio:session-changed'));
 };
 
 if (typeof localStorage !== 'undefined') loadMockState();

@@ -68,8 +68,8 @@ const ProductsContent = ({
   const pageProducts = query.data?.data ?? [];
   const pageCount = Math.max(1, query.data?.pageCount ?? 1);
   const counts = useNfts({ limit: 100 });
-  const categories = useMemo(() => [...new Set((counts.data?.data ?? []).map((nft) => nft.category))].map((name) => ({ name, count: (counts.data?.data ?? []).filter((nft) => nft.category === name).length })), [counts.data]);
-  const networks = useMemo(() => [...new Set((counts.data?.data ?? []).map((nft) => nft.network))].map((name) => ({ name, count: (counts.data?.data ?? []).filter((nft) => nft.network === name).length })), [counts.data]);
+  const categories = useMemo(() => [...new Set((counts.data?.data ?? []).map((nft) => nft.category))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map((name) => ({ name, count: (counts.data?.data ?? []).filter((nft) => nft.category === name).length })), [counts.data]);
+  const networks = useMemo(() => [...new Set((counts.data?.data ?? []).map((nft) => nft.network))].sort((a, b) => a.localeCompare(b, 'pt-BR')).map((name) => ({ name, count: (counts.data?.data ?? []).filter((nft) => nft.network === name).length })), [counts.data]);
 
   const toggleNetwork = (network: string) => {
     updateSearch((previous) => {
@@ -129,6 +129,8 @@ const ProductsContent = ({
         currentPage={currentPage}
         pageCount={pageCount}
         loading={query.isLoading}
+        updating={query.isFetching && !query.isLoading}
+        onRetry={() => void query.refetch()}
         error={query.isError ? 'Não foi possível carregar os NFTs.' : ''}
         onTabChange={(tab) =>
           updateSearch((previous) => ({

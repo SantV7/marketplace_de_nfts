@@ -1,7 +1,7 @@
 import { Heart, Mail, Minus, Plus, Share2, Star } from 'lucide-react';
 import type { NftDetail } from './productDetailData';
 import type { nftStyles } from './productDetailContent';
-import { totalReviews } from './productDetailContent';
+
 
 type NftStyle = (typeof nftStyles)[number];
 type Edition = NftDetail['editions'][number];
@@ -51,7 +51,7 @@ const NftPurchasePanel = ({
               <Star key={index} className="h-3.5 w-3.5 fill-[#D28A4C]" />
             ))}
           </div>
-          <span>{totalReviews} avaliações de colecionadores</span>
+          <span>{nftData.reviews.length} avaliações de colecionadores</span>
         </div>
       </div>
 
@@ -65,6 +65,7 @@ const NftPurchasePanel = ({
 
       <div className="mt-6">
         <h2 className="text-[14px] font-bold text-[#F5F1EB]">Edição:</h2>
+        {availableQuantity === 0 && <p role="status">Edição esgotada.</p>}
         <div className="mt-2 flex gap-2">
           {nftData.editions.map((edition) => (
             <button
@@ -111,6 +112,7 @@ const NftPurchasePanel = ({
         <button
           type="button"
           onClick={onAddToCart}
+          disabled={availableQuantity < 1 || quantity > availableQuantity}
           className="flex-1 h-12 rounded-xl bg-[#D28A4C] px-6 text-[14px] font-bold text-[#140D0A] transition-colors hover:bg-[#E09A5C] cursor-pointer"
         >
           COMPRAR
@@ -119,7 +121,7 @@ const NftPurchasePanel = ({
         <button
           type="button"
           onClick={onToggleFavorite}
-          aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+          aria-label={`${isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'} — Favoritar`}
           aria-pressed={isFavorite}
           className={`flex h-12 items-center gap-2 rounded-xl border px-5 text-[14px] transition-colors cursor-pointer ${
             isFavorite
