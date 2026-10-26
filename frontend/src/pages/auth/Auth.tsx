@@ -1,7 +1,19 @@
 import { useState, type FormEvent, type ReactNode } from 'react';
-import { Link, useLocation, useNavigate } from '@tanstack/react-router';
+import { Link, useLocation, useNavigate, useSearch } from '@tanstack/react-router';
 import { z } from 'zod';
-import Home from '@/pages/home/Home';
+import { useLogin, useRegister } from '@/services/queries';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '@/services/queries';
+
+const AuthPanel = ({ children }: { children: ReactNode }) => <div className="w-full">{children}</div>;
+const AuthDialog = ({ children, onClose, title }: { children: ReactNode; onClose: () => void; title: string }) => (
+  <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#0C0705]/45 px-5 py-8 font-mono" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <section role="dialog" aria-modal="true" aria-label={title} className="relative flex min-h-[600px] max-h-[calc(100svh-48px)] w-full max-w-[500px] flex-col overflow-y-auto border-b-[10px] border-[#D28A4C] bg-[#241612] px-8 pb-12 pt-10 sm:px-12">
+      <button type="button" onClick={onClose} aria-label="Fechar" className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center text-[#D28A4C] hover:text-[#F5F1EB]">×</button>
+      {children}
+    </section>
+  </div>
+);
 
 const emailSchema = z
   .string()
@@ -100,6 +112,7 @@ const Auth = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const isRegister = location.pathname === '/register';
+  const { redirect: returnTo } = useSearch({ from: isRegister ? '/register' : '/login' });
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -108,6 +121,9 @@ const Auth = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [errors, setErrors] = useState<AuthErrors>({});
   const [status, setStatus] = useState('');
+  const loginMutation = useLogin();
+  const registerMutation = useRegister();
+  const queryClient = useQueryClient();
 
   const handleModeChange = (register: boolean) => {
     setErrors({});
@@ -115,7 +131,7 @@ const Auth = () => {
     void navigate({ to: register ? '/register' : '/login' });
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatus('');
 
@@ -156,11 +172,19 @@ const Auth = () => {
     }
 
     setErrors({});
-    setStatus(
-      isRegister
-        ? 'Dados válidos. O cadastro demonstrativo ainda não está conectado a um serviço.'
-        : 'Dados válidos. O login demonstrativo ainda não está conectado a um serviço.',
-    );
+    try {
+      if (isRegister) await registerMutation.mutateAsync({ username, email, password });
+      else await loginMutation.mutateAsync({ email, password });
+      setStatus('Sessão iniciada com sucesso.');
+      await queryClient.invalidateQueries({ queryKey: queryKeys.session });
+      const destination = returnTo && returnTo.startsWith('/') && !returnTo.startsWith('//') ? returnTo : '/';
+      window.setTimeout(() => { void navigate({ to: destination }); }, 150);
+    } catch (error) {
+      const message = typeof error === 'object' && error && 'response' in error
+        ? String((error as { response?: { data?: { message?: string } } }).response?.data?.message ?? '')
+        : '';
+      setStatus(message || 'Não foi possível concluir a autenticação. Tente novamente.');
+    }
   };
 
   const handleSocialClick = (provider: string) => {
@@ -174,8 +198,8 @@ const Auth = () => {
   };
 
   const renderFormContent = (idPrefix: string) => (
-    <div className="w-full">
-      <div className="mb-6 hidden items-center justify-center gap-2 text-xl font-medium md:flex">
+    <AuthPanel>
+      <div className="mb-6 flex items-center justify-center gap-2 text-xl font-medium">
         <button
           type="button"
           onClick={() => handleModeChange(false)}
@@ -195,7 +219,7 @@ const Auth = () => {
         </button>
       </div>
 
-      <p className="mx-auto mb-6 hidden max-w-[410px] text-center text-[13px] leading-4 text-[#F5F1EB] md:block">
+      <p className="mx-auto mb-6 max-w-[410px] text-center text-[13px] leading-4 text-[#F5F1EB]">
         {isRegister
           ? 'Crie seu perfil de colecionador e conecte uma carteira quando quiser.'
           : 'Entre para gerenciar sua carteira, coleção e perfil de criador.'}
@@ -270,11 +294,11 @@ const Auth = () => {
         >
           {isRegister ? (
             <>
-              <span className="md:hidden">Criar perfil</span>
-              <span className="hidden md:inline">Criar conta</span>
+              <span className="md:hidden">{registerMutation.isPending ? 'Aguarde…' : 'Criar perfil'}</span>
+              <span className="hidden md:inline">{registerMutation.isPending ? 'Aguarde…' : 'Criar conta'}</span>
             </>
           ) : (
-            'Entrar'
+            loginMutation.isPending ? 'Aguarde…' : 'Entrar'
           )}
         </button>
       </form>
@@ -313,7 +337,7 @@ const Auth = () => {
         </button>
       </div>
 
-      <p className="mt-8 text-center text-xs text-[#CFB28C] md:hidden">
+      <p className="mt-8 text-center text-xs text-[#CFB28C]">
         {isRegister ? 'Já tem uma conta? ' : 'Novo na Kurio? '}
         <button
           type="button"
@@ -323,67 +347,15 @@ const Auth = () => {
           {isRegister ? 'Entre' : 'Crie uma conta'}
         </button>
       </p>
-    </div>
+    </AuthPanel>
   );
 
   return (
-    <>
-      <div className="hidden md:block">
-        <Home />
-      </div>
-      <div className="min-h-svh bg-[#140D0A] px-6 pb-10 pt-24 font-mono text-[#F5F1EB] md:hidden">
-        <Link
-          to="/"
-          className="mx-auto block w-fit text-[26px] font-bold uppercase tracking-[0.18em] text-[#F5F1EB]"
-        >
-          KURIO
-        </Link>
-        <h1 className="mb-8 mt-10 text-center text-base font-bold">
-          {isRegister ? 'Criar perfil de colecionador' : 'Entrar'}
-        </h1>
-        {renderFormContent('mobile')}
-      </div>
-      <div
-        className="fixed inset-0 z-50 hidden items-center justify-center bg-[#0C0705]/45 px-5 py-8 font-mono md:flex"
-        role="presentation"
-        onMouseDown={(event) => {
-          if (event.target === event.currentTarget) {
-            void navigate({ to: '/' });
-          }
-        }}
-      >
-        <section
-          role="dialog"
-          aria-modal="true"
-          aria-label={isRegister ? 'Criar conta' : 'Entrar'}
-          className="relative flex min-h-[600px] max-h-[calc(100svh-48px)] w-full max-w-[500px] flex-col overflow-y-auto border-b-[10px] border-[#D28A4C] bg-[#241612] px-8 pb-12 pt-10 sm:px-12"
-        >
-          <button
-            type="button"
-            onClick={() => void navigate({ to: '/' })}
-            aria-label="Fechar"
-            className="absolute right-4 top-4 flex h-7 w-7 items-center justify-center text-[#D28A4C] hover:text-[#F5F1EB]"
-          >
-            <svg
-              width="18"
-              height="18"
-              viewBox="0 0 18 18"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              aria-hidden="true"
-            >
-              <path
-                d="M3.17007 3.17007C3.39682 2.94331 3.76447 2.94331 3.99122 3.17007L9 8.17884L14.0088 3.17007C14.2355 2.94331 14.6032 2.94331 14.8299 3.17007C15.0567 3.39682 15.0567 3.76447 14.8299 3.99122L9.82116 9L14.8299 14.0088C15.0567 14.2355 15.0567 14.6032 14.8299 14.8299C14.6032 15.0567 14.2355 15.0567 14.0088 14.8299L9 9.82116L3.99122 14.8299C3.76447 15.0567 3.39682 15.0567 3.17007 14.8299C2.94331 14.6032 2.94331 14.2355 3.17007 14.0088L8.17884 9L3.17007 3.99122C2.94331 3.76447 2.94331 3.39682 3.17007 3.17007Z"
-                fillRule="evenodd"
-                clipRule="evenodd"
-                fill="#D28A4C"
-              />
-            </svg>
-          </button>
-          {renderFormContent('desktop')}
-        </section>
-      </div>
-    </>
+      <AuthDialog title={isRegister ? 'Criar conta' : 'Entrar'} onClose={() => void navigate({ to: '/' })}>
+          <Link to="/" className="mx-auto mb-6 block w-fit text-[26px] font-bold uppercase tracking-[0.18em] text-[#F5F1EB]">KURIO</Link>
+          <h1 className="mb-6 text-center text-base font-bold">{isRegister ? 'Criar perfil de colecionador' : 'Entrar'}</h1>
+          {renderFormContent('auth')}
+      </AuthDialog>
   );
 };
 

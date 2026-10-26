@@ -31,7 +31,7 @@ test('mobile NFT detail allows selecting edition and adding an item to cart', as
   await expect(page.getByRole('button', { name: '1/10' }).first()).toHaveAttribute('aria-pressed', 'true');
   await page.getByRole('button', { name: 'Aumentar quantidade, máximo 10' }).click();
   await expect(
-    page.getByRole('region', { name: 'Detalhes de Emerald Ape' }).locator('[aria-live="polite"]'),
+    page.getByRole('region', { name: 'Detalhes de Emerald Ape' }).getByText('2', { exact: true }),
   ).toHaveText('2');
 
   await page.getByRole('button', { name: 'Comprar NFT' }).click();

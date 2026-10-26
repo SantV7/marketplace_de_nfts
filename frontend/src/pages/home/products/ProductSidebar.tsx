@@ -1,6 +1,5 @@
 import Category from '@/components/nftProduct/Category';
 import { Layers, Network, X } from 'lucide-react';
-import { categories, networks } from './productData';
 import FeaturedNftCard from './FeaturedNftCard';
 import PriceRangeFilter from './PriceRangeFilter';
 
@@ -10,6 +9,8 @@ interface PriceRange {
 }
 
 interface ProductSidebarProps {
+  categories: { name: string; count: number }[];
+  networks: { name: string; count: number }[];
   mobileOpen?: boolean;
   onMobileClose?: () => void;
   selectedCategory: string | null;
@@ -23,6 +24,8 @@ interface ProductSidebarProps {
 }
 
 const ProductSidebar = ({
+  categories,
+  networks,
   mobileOpen = false,
   onMobileClose,
   selectedCategory,

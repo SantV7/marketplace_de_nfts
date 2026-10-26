@@ -6,7 +6,7 @@ import goldenBeat from '@/assets/img/nfts/golden_beat.png';
 export interface NftDetail {
   id: string;
   name: string;
-  price: number;
+  price: string;
   rating: number;
   description: string;
   editions: string[];
@@ -48,7 +48,7 @@ export const getNftDetailById = (id: string): NftDetail | null => {
   return {
     id,
     name: found.name,
-    price: found.price,
+    price: String(found.price),
     rating: 5,
     description: `Um colecionável digital exclusivo da coleção Kurio Editions, verificado na Ethereum, com arte desbloqueável e acesso para colecionadores.`,
     editions: ['1/1', '1/10', '1/50', 'ABERTA'],

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import Card from '@/components/nftProduct/Card';
-import { nfts } from '@/pages/home/products/productData';
-
-const recommendationPages = [nfts.slice(0, 5), nfts.slice(5, 10), nfts.slice(10, 15)];
+import { useNfts } from '@/services/queries';
 
 const CartRecommendations = () => {
+  const { data } = useNfts({ limit: 100 });
+  const nfts = data?.data ?? [];
+  const recommendationPages = [nfts.slice(0, 5), nfts.slice(5, 10), nfts.slice(10, 15)];
   const [activePage, setActivePage] = useState(0);
 
   return (
@@ -35,7 +36,7 @@ const CartRecommendations = () => {
             img={nft.image}
             nameNft={nft.name}
             idNft={nft.id}
-            price={nft.price.toFixed(2)}
+            price={nft.price}
             previousPrice={nft.previousPrice}
           />
         ))}

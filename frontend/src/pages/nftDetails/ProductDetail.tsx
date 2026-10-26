@@ -2,12 +2,9 @@ import { useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import Footer from '@/components/footer/Footer';
 import Navbar from '@/components/navbar/Navbar';
-import { addCartItem } from '@/libs/cartStore';
-import { getNftDetailById } from './productDetailData';
-import {
-  availableQuantityByEdition,
-  nftStyles,
-} from './productDetailContent';
+import { useAddCartItem, useFavorites, useNft, useToggleFavorite } from '@/services/queries';
+import type { NftDetail } from './productDetailData';
+import { nftStyles } from './productDetailContent';
 import NftDetailsTabs from './NftDetailsTabs';
 import NftGallery from './NftGallery';
 import NftMobileDetail from './NftMobileDetail';
@@ -22,29 +19,41 @@ const ProductDetail = () => {
 
 const ProductDetailContent = ({ id }: { id: string }) => {
   const navigate = useNavigate();
-  const nftData = getNftDetailById(id);
+  const nftQuery = useNft(id);
+  const nftData = nftQuery.data;
+  const addCart = useAddCartItem();
+  const favoritesQuery = useFavorites();
+  const toggleFavorite = useToggleFavorite();
   const [cartError, setCartError] = useState('');
   const [selectedStyle, setSelectedStyle] = useState(nftStyles[0]);
   const [selectedEdition, setSelectedEdition] = useState('1/50');
   const [quantity, setQuantity] = useState(1);
-  const [isFavorite, setIsFavorite] = useState(false);
+  const isFavorite = favoritesQuery.data?.includes(Number(id)) ?? false;
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  if (!nftData) return <NftNotFound id={id} />;
+  if (nftQuery.isLoading) return <div role="status" className="min-h-svh animate-pulse bg-[#140D0A] p-10 text-[#CFB28C]">Carregando NFT…</div>;
+  if (nftQuery.isError || !nftData) return <NftNotFound id={id} />;
 
   const formattedId = String(id).padStart(3, '0');
-  const baseImage = nftData.thumbnails[0];
-  const availableQuantity = availableQuantityByEdition[selectedEdition] ?? 1;
+  const detailData: NftDetail = {
+    id: String(nftData.id), name: nftData.name, price: nftData.price, rating: nftData.rating ?? 5,
+    description: nftData.description ?? '', editions: nftData.editions?.map((row) => row.name) ?? [nftData.edition],
+    tokenId: nftData.tokenId ?? String(nftData.id).padStart(3, '0'), collection: nftData.collection ?? '',
+    attributes: nftData.attributes ?? [], thumbnails: nftData.thumbnails ?? [nftData.image],
+    contractAddress: nftData.contractAddress ?? '', blockchain: nftData.blockchain ?? nftData.network, royalty: nftData.royalty ?? '0%',
+  };
+  const baseImage = detailData.thumbnails[0];
+  const availableQuantity = nftData.editions?.find((edition) => edition.name === selectedEdition)?.available ?? nftData.available;
 
-  const handleAddToCart = () => {
+  const handleAddToCart = async () => {
     setCartError('');
 
     try {
-      const result = addCartItem({
+      await addCart.mutateAsync({
         nftId: id,
         name: nftData.name,
         image: baseImage,
-        price: nftData.price.toFixed(2),
+        price: nftData.price,
         edition: selectedEdition,
         styleId: selectedStyle.id,
         styleLabel: selectedStyle.label,
@@ -53,22 +62,17 @@ const ProductDetailContent = ({ id }: { id: string }) => {
         availableQuantity,
       });
 
-      if (!result.success) {
-        setCartError(result.message);
-        return;
-      }
-
       void navigate({ to: '/cart' });
     } catch (error) {
       console.error('Não foi possível salvar o NFT no carrinho.', error);
-      setCartError('Não foi possível salvar o carrinho neste navegador. Tente novamente.');
+      setCartError('Não foi possível atualizar o carrinho. Verifique a disponibilidade e tente novamente.');
     }
   };
 
   const handleSelectEdition = (edition: string) => {
     setSelectedEdition(edition);
     setQuantity((currentQuantity) =>
-      Math.min(currentQuantity, availableQuantityByEdition[edition] ?? 1),
+      Math.min(currentQuantity, nftData.editions?.find((row) => row.name === edition)?.available ?? 1),
     );
   };
 
@@ -79,7 +83,7 @@ const ProductDetailContent = ({ id }: { id: string }) => {
       </div>
 
       <NftMobileDetail
-        nftData={nftData}
+        nftData={detailData}
         formattedId={formattedId}
         baseImage={baseImage}
         selectedStyle={selectedStyle}
@@ -91,7 +95,7 @@ const ProductDetailContent = ({ id }: { id: string }) => {
         onSelectEdition={handleSelectEdition}
         onQuantityChange={setQuantity}
         onAddToCart={handleAddToCart}
-        onToggleFavorite={() => setIsFavorite(!isFavorite)}
+        onToggleFavorite={() => toggleFavorite.mutate({ id: Number(id), active: isFavorite })}
       />
 
       <div className="hidden md:block">
@@ -111,7 +115,7 @@ const ProductDetailContent = ({ id }: { id: string }) => {
               onModalOpenChange={setIsModalOpen}
             />
             <NftPurchasePanel
-              nftData={nftData}
+              nftData={detailData}
               formattedId={formattedId}
               selectedStyle={selectedStyle}
               selectedEdition={selectedEdition}
@@ -122,12 +126,12 @@ const ProductDetailContent = ({ id }: { id: string }) => {
               onSelectEdition={handleSelectEdition}
               onQuantityChange={setQuantity}
               onAddToCart={handleAddToCart}
-              onToggleFavorite={() => setIsFavorite(!isFavorite)}
+              onToggleFavorite={() => toggleFavorite.mutate({ id: Number(id), active: isFavorite })}
             />
           </div>
 
           <NftDetailsTabs
-            nftData={nftData}
+            nftData={detailData}
             formattedId={formattedId}
             styleLabel={selectedStyle.label}
             selectedEdition={selectedEdition}

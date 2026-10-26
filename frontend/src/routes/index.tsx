@@ -6,63 +6,32 @@ import Market from '@/pages/home/Market';
 import ProductDetail from '@/pages/nftDetails/ProductDetail';
 import Cart from '@/pages/cart/Cart';
 import Checkout from '@/pages/payments/Checkout';
-import DemoOrderConfirmation from '@/pages/payments/DemoOrderConfirmation';
+import OrderReceiptRoute from '@/pages/payments/OrderReceiptRoute';
+import { api } from '@/services/api';
+import type { Session } from '@/services/contracts';
+import { ProfilePage, WalletsPage } from '@/pages/profile/AccountPages';
+import { validateCatalogSearch } from './catalogSearch';
+import { redirect } from '@tanstack/react-router';
+
 
 const Auth = lazy(() => import('@/pages/auth/Auth'));
 
-const validTabs = ['all', 'new', 'trending'] as const;
-const validSortOrders = ['recent', 'price-asc', 'price-desc'] as const;
-const validNetworks = ['Ethereum', 'Polygon', 'Solana'] as const;
-const validNetworkSet = new Set<string>(validNetworks);
-
-export type CatalogSearch = {
-  q?: string;
-  category?: string;
-  network?: string[];
-  min?: number;
-  max?: number;
-  sort?: (typeof validSortOrders)[number];
-  tab?: (typeof validTabs)[number];
-  page?: number;
-  coupon?: string;
-};
-
-
-
-export const validateCatalogSearch = (search: Record<string, unknown>): CatalogSearch => {
-  const query = typeof search.q === 'string' ? search.q.trim() : '';
-  const category = typeof search.category === 'string' ? search.category : '';
-  const networks = Array.isArray(search.network)
-    ? search.network.filter(
-        (network): network is string =>
-          typeof network === 'string' && validNetworkSet.has(network),
-      )
-    : typeof search.network === 'string' && validNetworkSet.has(search.network)
-      ? [search.network]
-      : [];
-  const min = Number(search.min);
-  const max = Number(search.max);
-  const page = Number(search.page);
-  const sort = validSortOrders.find((order) => order === search.sort);
-  const tab = validTabs.find((value) => value === search.tab);
-  const coupon = typeof search.coupon === 'string' ? search.coupon.trim().toUpperCase() : '';
-
-  return {
-    ...(query ? { q: query } : {}),
-    ...(category ? { category } : {}),
-    ...(networks.length ? { network: networks } : {}),
-    ...(Number.isFinite(min) && min >= 0 ? { min } : {}),
-    ...(Number.isFinite(max) && max > 0 ? { max } : {}),
-    ...(sort ? { sort } : {}),
-    ...(tab ? { tab } : {}),
-    ...(Number.isInteger(page) && page > 0 ? { page } : {}),
-    ...(coupon ? { coupon } : {}),
-  };
-};
 
 const rootRoute = createRootRoute({
   validateSearch: validateCatalogSearch,
 });
+
+const requireSession = async ({ location }: { location: { href: string } }) => {
+  if (!localStorage.getItem('kurio_token')) {
+    throw redirect({ to: '/login', search: { redirect: location.href } });
+  }
+  try {
+    await api.get<Session>('/auth/session');
+  } catch {
+    localStorage.removeItem('kurio_token');
+    throw redirect({ to: '/login', search: { redirect: location.href } });
+  }
+};
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -104,14 +73,19 @@ const cartRoute = createRoute({
 const paymentRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/payment',
+  beforeLoad: requireSession,
   component: Checkout,
 });
 
 const orderConfirmationRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/order-confirmation',
-  component: DemoOrderConfirmation,
+  beforeLoad: requireSession,
+  component: OrderReceiptRoute,
 });
+
+const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireSession, component: ProfilePage });
+const walletsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/wallets', beforeLoad: requireSession, component: WalletsPage });
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -142,6 +116,8 @@ const routeTree = rootRoute.addChildren([
   cartRoute,
   paymentRoute,
   orderConfirmationRoute,
+  profileRoute,
+  walletsRoute,
   loginRoute,
   registerRoute,
 ]);

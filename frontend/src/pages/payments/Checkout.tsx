@@ -3,16 +3,11 @@ import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import Footer from '@/components/footer/Footer';
 import Navbar from '@/components/navbar/Navbar';
-import { useCartItems } from '@/libs/cartStore';
-import {
-  networkFee,
-  promoCode,
-  toEthUnits,
-} from '@/pages/cart/cartPricing';
+import { toEthUnits } from '@/pages/cart/cartPricing';
 import CheckoutOrderSummary from './CheckoutOrderSummary';
 import CheckoutMobile from './CheckoutMobile';
 import CheckoutProfileForm from './CheckoutProfileForm';
-import { createDemoReceipt, saveDemoReceipt } from './demoReceipt';
+import { useCart, useCreateOrder, useQuote } from '@/services/queries';
 import {
   connectedWallets,
   walletProviders,
@@ -23,7 +18,10 @@ import {
 const Checkout = () => {
   const { coupon } = useSearch({ from: '/payment' });
   const navigate = useNavigate();
-  const items = useCartItems();
+  const cartQuery = useCart();
+  const items = cartQuery.data ?? [];
+  const quoteQuery = useQuote(coupon);
+  const createOrder = useCreateOrder();
   const [selectedProvider, setSelectedProvider] = useState<WalletProviderId>(
     walletProviders[2].id,
   );
@@ -32,28 +30,29 @@ const Checkout = () => {
   );
   const [confirmationMessage, setConfirmationMessage] = useState('');
 
-  const subtotal = items.reduce(
-    (total, item) => total + toEthUnits(item.price) * BigInt(item.quantity),
-    0n,
-  );
-  const discount = coupon === promoCode ? (subtotal * 1_000n) / 10_000n : 0n;
-  const fee = items.length > 0 ? networkFee : 0n;
-  const total = subtotal - discount + fee;
+  const subtotal = toEthUnits(quoteQuery.data?.subtotal ?? '0');
+  const discount = toEthUnits(quoteQuery.data?.discount ?? '0');
+  const fee = toEthUnits(quoteQuery.data?.networkFee ?? '0');
+  const total = toEthUnits(quoteQuery.data?.total ?? '0');
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (items.length === 0) return;
 
+    if (createOrder.isPending) return;
     try {
-      const receipt = createDemoReceipt({
-        items,
-        total,
-        discount,
-        fee,
-        providerId: selectedProvider,
-        walletId: selectedWallet,
-      });
-      saveDemoReceipt(receipt);
+      if (!quoteQuery.data || new Date(quoteQuery.data.expiresAt).getTime() <= Date.now()) {
+        await quoteQuery.refetch();
+        setConfirmationMessage('A cotação foi atualizada. Revise os valores e confirme novamente.');
+        return;
+      }
+      const response = await createOrder.mutateAsync({ key: crypto.randomUUID(), input: { items, total: quoteQuery.data.total, discount: quoteQuery.data.discount, networkFee: quoteQuery.data.networkFee } });
+      if (response.status !== 'confirmed') {
+        setConfirmationMessage(response.status === 'rejected' ? 'Pagamento recusado. O carrinho foi preservado.' : 'Pedido pendente. Consulte novamente em instantes.');
+        return;
+      }
+      sessionStorage.setItem('kurio-order-id', response.orderId);
+      sessionStorage.setItem('kurio-order-snapshot', JSON.stringify({ ...response, wallet: selectedWallet, provider: selectedProvider }));
       await navigate({ to: '/order-confirmation' });
     } catch (error) {
       console.error('Não foi possível criar a prévia do recibo.', error);
@@ -102,7 +101,7 @@ const Checkout = () => {
                   selectedProvider={selectedProvider}
                   onProviderChange={setSelectedProvider}
                   confirmationMessage={confirmationMessage}
-                  couponApplied={coupon === promoCode}
+                  couponApplied={Boolean(quoteQuery.data && discount > 0n)}
                 />
               </div>
             </form>

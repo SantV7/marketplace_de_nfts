@@ -8,6 +8,8 @@ interface ProductCatalogProps {
   sortOrder: SortOrder;
   currentPage: number;
   pageCount: number;
+  loading?: boolean;
+  error?: string;
   onTabChange: (tab: TabId) => void;
   onSortChange: (order: SortOrder) => void;
   onPageChange: (page: number) => void;
@@ -19,6 +21,8 @@ const ProductCatalog = ({
   sortOrder,
   currentPage,
   pageCount,
+  loading = false,
+  error = '',
   onTabChange,
   onSortChange,
   onPageChange,
@@ -90,7 +94,7 @@ const ProductCatalog = ({
         </div>
       </div>
 
-      {products.length > 0 ? (
+      {loading ? <div role="status" className="grid grid-cols-2 gap-6 xl:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <div key={index} className="aspect-[0.8] animate-pulse rounded-2xl bg-[#231712]" />)}</div> : error ? <p role="alert" className="py-16 text-center text-sm text-[#CFB28C]">{error}</p> : products.length > 0 ? (
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 min-[520px]:gap-x-6 [&>article:nth-child(even)]:translate-y-8 md:[&>article:nth-child(even)]:translate-y-0 xl:grid-cols-3">
           {products.map((nft) => (
             <Card
@@ -98,7 +102,7 @@ const ProductCatalog = ({
               img={nft.image}
               nameNft={nft.name}
               idNft={nft.id}
-              price={nft.price.toFixed(2)}
+              price={nft.price}
               previousPrice={nft.previousPrice}
             />
           ))}

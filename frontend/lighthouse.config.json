@@ -1,0 +1,12 @@
+{
+  "pages": [
+    { "path": "/", "name": "home" },
+    { "path": "/nft/42", "name": "nft-detail" }
+  ],
+  "profiles": [
+    { "name": "mobile", "preset": "desktop", "formFactor": "mobile", "screenEmulation": { "mobile": true, "width": 390, "height": 844, "deviceScaleFactor": 1 } },
+    { "name": "desktop", "preset": "desktop", "formFactor": "desktop", "screenEmulation": { "mobile": false, "width": 1440, "height": 900, "deviceScaleFactor": 1 } }
+  ],
+  "runsPerPageProfile": 3,
+  "categories": ["performance", "accessibility", "best-practices", "seo"]
+}

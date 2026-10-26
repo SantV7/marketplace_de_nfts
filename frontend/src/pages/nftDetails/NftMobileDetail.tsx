@@ -141,7 +141,7 @@ const NftMobileDetail = ({
                 </button>
               </div>
               <span className="shrink-0 text-xl font-bold leading-6 text-[#E89B55]">
-                {nftData.price.toFixed(2)} ETH
+                {nftData.price} ETH
               </span>
             </div>
 

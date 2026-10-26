@@ -3,32 +3,32 @@ import { Link } from '@tanstack/react-router';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
 import Footer from '@/components/footer/Footer';
 import Navbar from '@/components/navbar/Navbar';
-import { useCartItems, removeCartItem, updateCartItemQuantity } from '@/libs/cartStore';
+import { useCart, useQuote, useRemoveCartItem, useUpdateCartItem } from '@/services/queries';
 import CartItemList from './CartItemList';
 import CartRecommendations from './CartRecommendations';
 import CartSummary from './CartSummary';
-import { networkFee, promoCode, toEthUnits } from './cartPricing';
+import { toEthUnits } from './cartPricing';
 
 const Cart = () => {
-  const items = useCartItems();
+  const cartQuery = useCart();
+  const items = cartQuery.data ?? [];
+  const updateItem = useUpdateCartItem();
+  const removeItem = useRemoveCartItem();
   const [coupon, setCoupon] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState(false);
   const [couponMessage, setCouponMessage] = useState('');
   const [cartActionError, setCartActionError] = useState('');
 
-  const subtotal = items.reduce(
-    (total, item) => total + toEthUnits(item.price) * BigInt(item.quantity),
-    0n,
-  );
-  const discount = appliedCoupon ? (subtotal * 1_000n) / 10_000n : 0n;
-  const fee = items.length > 0 ? networkFee : 0n;
-  const total = subtotal - discount + fee;
+  const quoteQuery = useQuote(appliedCoupon ? coupon.trim().toUpperCase() : undefined);
+  const subtotal = toEthUnits(quoteQuery.data?.subtotal ?? '0');
+  const discount = toEthUnits(quoteQuery.data?.discount ?? '0');
+  const fee = toEthUnits(quoteQuery.data?.networkFee ?? '0');
+  const total = toEthUnits(quoteQuery.data?.total ?? '0');
 
   const handleQuantityChange = (itemId: string, quantity: number) => {
     setCartActionError('');
     try {
-      const result = updateCartItemQuantity(itemId, quantity);
-      if (!result.success) setCartActionError(result.message);
+      updateItem.mutate({ id: itemId, quantity }, { onError: () => setCartActionError('Disponibilidade insuficiente. Tente uma quantidade menor.') });
     } catch (error) {
       console.error('Não foi possível atualizar a quantidade do carrinho.', error);
       setCartActionError('Não foi possível salvar a alteração. Tente novamente.');
@@ -38,7 +38,7 @@ const Cart = () => {
   const handleRemoveItem = (itemId: string) => {
     setCartActionError('');
     try {
-      removeCartItem(itemId);
+      removeItem.mutate(itemId, { onError: () => setCartActionError('Não foi possível remover o item. Tente novamente.') });
     } catch (error) {
       console.error('Não foi possível remover o NFT do carrinho.', error);
       setCartActionError('Não foi possível salvar a remoção. Tente novamente.');
@@ -51,15 +51,15 @@ const Cart = () => {
     setCouponMessage('');
   };
 
-  const handleApplyCoupon = () => {
-    if (coupon.trim().toUpperCase() === promoCode) {
+  const handleApplyCoupon = async () => {
+    try {
+      await import('@/services/api').then(({ api }) => api.post('/quotes', { coupon: coupon.trim().toUpperCase() }));
       setAppliedCoupon(true);
-      setCouponMessage('Cupom KURIO10 aplicado: 10% de desconto demonstrativo.');
-      return;
+      setCouponMessage('Cupom aplicado à cotação.');
+    } catch {
+      setAppliedCoupon(false);
+      setCouponMessage('Cupom inválido ou expirado. Verifique o código e tente novamente.');
     }
-
-    setAppliedCoupon(false);
-    setCouponMessage('Cupom inválido ou expirado. Verifique o código e tente novamente.');
   };
 
   const handleRemoveCoupon = () => {
@@ -67,6 +67,7 @@ const Cart = () => {
     setCouponMessage('Cupom removido.');
   };
 
+  if (cartQuery.isLoading) return <main role="status" className="min-h-svh animate-pulse bg-[#140D0A] p-10 text-[#CFB28C]">Carregando carrinho…</main>;
   return (
     <div className="min-h-screen bg-[#140D0A] font-mono text-[#F5F1EB]">
       <div className="hidden md:block">

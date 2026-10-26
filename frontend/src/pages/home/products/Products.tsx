@@ -2,8 +2,11 @@ import { useMemo, useState } from 'react';
 import { useLocation, useRouterState } from '@tanstack/react-router';
 import ProductCatalog from './ProductCatalog';
 import ProductSidebar from './ProductSidebar';
-import { initialPriceRange, nfts, type SortOrder, type TabId } from './productData';
-import { router, type CatalogSearch } from '@/routes';
+import { initialPriceRange, type SortOrder, type TabId } from './productData';
+import { router } from '@/routes';
+import type { CatalogSearch } from '@/routes/catalogSearch';
+import { useNfts } from '@/services/queries';
+import type { Nft } from '@/services/contracts';
 
 const pageSize = 9;
 const emptyNetworks: string[] = [];
@@ -61,37 +64,12 @@ const ProductsContent = ({
   const sortOrder: SortOrder = search.sort ?? 'recent';
   const currentPage = search.page ?? 1;
 
-  const filteredNfts = useMemo(() => {
-    const filtered = nfts.filter((nft) => {
-      const query = search.q?.toLocaleLowerCase() ?? '';
-
-      const matchesQuery =
-        !query ||
-        nft.name.toLocaleLowerCase().includes(query) ||
-        String(nft.id).includes(query) ||
-        String(nft.id).padStart(3, '0').includes(query);
-
-      const matchesTab =
-        activeTab === 'all' ||
-        (activeTab === 'new' && nft.isNew) ||
-        (activeTab === 'trending' && nft.isTrending);
-      const matchesCategory = !selectedCategory || nft.category === selectedCategory;
-
-      const matchesNetwork =
-        selectedNetworks.length === 0 || selectedNetworks.includes(nft.network);
-
-      const matchesPrice = nft.price >= priceRange.min && nft.price <= priceRange.max;
-
-      return matchesQuery && matchesTab && matchesCategory && matchesNetwork && matchesPrice;
-    });
-
-    if (sortOrder === 'price-asc') return filtered.sort((a, b) => a.price - b.price);
-    if (sortOrder === 'price-desc') return filtered.sort((a, b) => b.price - a.price);
-    return filtered;
-  }, [activeTab, priceRange.max, priceRange.min, search.q, selectedCategory, selectedNetworks, sortOrder]);
-
-  const pageCount = Math.max(3, Math.ceil(filteredNfts.length / pageSize));
-  const pageProducts = filteredNfts.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const query = useNfts({ search: search.q, category: selectedCategory ?? undefined, network: selectedNetworks, min: priceRange.min, max: priceRange.max, sort: sortOrder, tab: activeTab, page: currentPage, limit: pageSize });
+  const pageProducts = query.data?.data ?? [];
+  const pageCount = Math.max(1, query.data?.pageCount ?? 1);
+  const counts = useNfts({ limit: 100 });
+  const categories = useMemo(() => [...new Set((counts.data?.data ?? []).map((nft) => nft.category))].map((name) => ({ name, count: (counts.data?.data ?? []).filter((nft) => nft.category === name).length })), [counts.data]);
+  const networks = useMemo(() => [...new Set((counts.data?.data ?? []).map((nft) => nft.network))].map((name) => ({ name, count: (counts.data?.data ?? []).filter((nft) => nft.network === name).length })), [counts.data]);
 
   const toggleNetwork = (network: string) => {
     updateSearch((previous) => {
@@ -118,6 +96,8 @@ const ProductsContent = ({
       className="mx-auto grid w-full max-w-360 grid-cols-1 items-start gap-5 px-6 pb-28 pt-4 font-mono md:grid-cols-[270px_minmax(0,1fr)] md:gap-10 md:px-6 md:pb-16 md:pt-0 lg:px-27.5"
     >
       <ProductSidebar
+        categories={categories}
+        networks={networks}
         mobileOpen={mobileFiltersOpen}
         onMobileClose={onMobileFiltersClose}
         selectedCategory={selectedCategory}
@@ -143,11 +123,13 @@ const ProductsContent = ({
         }}
       />
       <ProductCatalog
-        products={pageProducts}
+        products={pageProducts as Nft[]}
         activeTab={activeTab}
         sortOrder={sortOrder}
         currentPage={currentPage}
         pageCount={pageCount}
+        loading={query.isLoading}
+        error={query.isError ? 'Não foi possível carregar os NFTs.' : ''}
         onTabChange={(tab) =>
           updateSearch((previous) => ({
             ...previous,
