@@ -1,9 +1,5 @@
 import { expect, test } from '@playwright/test';
 
-test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => { localStorage.clear(); sessionStorage.clear(); });
-});
-
 test('catalog search is sent to the HTTP mock and preserved in the URL', async ({ page }) => {
   test.skip(test.info().project.name !== 'mobile-chromium');
   const calls: string[] = [];

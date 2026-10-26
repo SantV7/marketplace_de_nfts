@@ -11,8 +11,9 @@ export const api = axios.create({
 api.interceptors.response.use(
   (response) => response,
   (error: unknown) => {
-    if (axios.isAxiosError(error) && error.response?.status === 401 && typeof window !== 'undefined') {
+    if (axios.isAxiosError(error) && error.response?.status === 401 && typeof window !== 'undefined' && localStorage.getItem('kurio_token')) {
       localStorage.removeItem('kurio_token');
+      window.dispatchEvent(new Event('kurio:session-expired'));
     }
     return Promise.reject(error);
   },

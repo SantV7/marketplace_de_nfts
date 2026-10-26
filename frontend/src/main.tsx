@@ -1,9 +1,7 @@
-import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './styles/global.css'
 import App from './App.tsx'
-import { RealtimeSync } from './services/RealtimeSync'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -17,17 +15,15 @@ const queryClient = new QueryClient({
 async function prepareApp() {
   if (import.meta.env.VITE_ENABLE_MOCKS === 'true' || import.meta.env.DEV) {
     const { worker } = await import('./mocks/browser')
-    await worker.start()
+    await worker.start({ serviceWorker: { url: '/mockServiceWorker.js?v=2.15.0' } })
   }
+  const { RealtimeSync } = await import('./services/RealtimeSync')
+  createRoot(document.getElementById('root')!).render(
+    <QueryClientProvider client={queryClient}>
+      <RealtimeSync />
+      <App />
+    </QueryClientProvider>,
+  )
 }
 
-prepareApp().then(() => {
-  createRoot(document.getElementById('root')!).render(
-    <StrictMode>
-      <QueryClientProvider client={queryClient}>
-        <RealtimeSync />
-        <App />
-      </QueryClientProvider>
-    </StrictMode>,
-  )
-})
+prepareApp()

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import Footer from '@/components/footer/Footer';
@@ -7,7 +7,7 @@ import { toEthUnits } from '@/pages/cart/cartPricing';
 import CheckoutOrderSummary from './CheckoutOrderSummary';
 import CheckoutMobile from './CheckoutMobile';
 import CheckoutProfileForm from './CheckoutProfileForm';
-import { useCart, useCreateOrder, useQuote } from '@/services/queries';
+import { useCart, useCreateOrder, useOrder, useQuote } from '@/services/queries';
 import {
   connectedWallets,
   walletProviders,
@@ -29,30 +29,78 @@ const Checkout = () => {
     connectedWallets[0].id,
   );
   const [confirmationMessage, setConfirmationMessage] = useState('');
+  const savedOrderKey = localStorage.getItem('kurio-pending-order-key');
+  const recoveredKey = savedOrderKey ? (JSON.parse(savedOrderKey) as { key?: string }).key : undefined;
+  const pendingOrderId = localStorage.getItem('kurio-pending-order-id') ?? (recoveredKey ? `ORD-${recoveredKey.slice(0, 12)}` : '');
+  const pendingOrder = useOrder(pendingOrderId);
+
+  useEffect(() => {
+    const onNftUpdated = () => setConfirmationMessage('Preço ou disponibilidade alterados. A cotação foi atualizada; revise antes de confirmar.');
+    window.addEventListener('kurio:nft-updated', onNftUpdated);
+    return () => window.removeEventListener('kurio:nft-updated', onNftUpdated);
+  }, []);
+
+  useEffect(() => {
+    const order = pendingOrder.data;
+    if (!order || order.status !== 'confirmed') return;
+    localStorage.removeItem('kurio-pending-order-id');
+    localStorage.removeItem('kurio-pending-order-key');
+    localStorage.setItem('kurio-order-id', order.orderId);
+    void navigate({ to: '/order-confirmation' });
+  }, [navigate, pendingOrder.data]);
 
   const subtotal = toEthUnits(quoteQuery.data?.subtotal ?? '0');
   const discount = toEthUnits(quoteQuery.data?.discount ?? '0');
   const fee = toEthUnits(quoteQuery.data?.networkFee ?? '0');
   const total = toEthUnits(quoteQuery.data?.total ?? '0');
+  const paymentMessage = confirmationMessage || (pendingOrder.data?.status === 'rejected' ? 'Pagamento recusado. O carrinho foi preservado.' : '');
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const form = new FormData(event.currentTarget);
     if (items.length === 0) return;
 
     if (createOrder.isPending) return;
     try {
-      if (!quoteQuery.data || new Date(quoteQuery.data.expiresAt).getTime() <= Date.now()) {
-        await quoteQuery.refetch();
+      const previousQuote = quoteQuery.data;
+      const [freshCart, freshQuote] = await Promise.all([cartQuery.refetch(), quoteQuery.refetch()]);
+      const currentItems = freshCart.data ?? [];
+      const currentQuote = freshQuote.data;
+      if (!currentQuote || currentItems.length === 0) {
+        setConfirmationMessage('Não foi possível validar o carrinho e a cotação. Tente novamente.');
+        return;
+      }
+      const quoteChanged = previousQuote && (previousQuote.total !== currentQuote.total || previousQuote.version !== currentQuote.version);
+      const itemsChanged = JSON.stringify(items) !== JSON.stringify(currentItems);
+      if (quoteChanged || itemsChanged || new Date(currentQuote.expiresAt).getTime() <= Date.now()) {
         setConfirmationMessage('A cotação foi atualizada. Revise os valores e confirme novamente.');
         return;
       }
-      const response = await createOrder.mutateAsync({ key: crypto.randomUUID(), input: { items, total: quoteQuery.data.total, discount: quoteQuery.data.discount, networkFee: quoteQuery.data.networkFee } });
+      const input = { items: currentItems, total: currentQuote.total, discount: currentQuote.discount, networkFee: currentQuote.networkFee, coupon: currentQuote.coupon, quoteVersion: currentQuote.version, quoteExpiresAt: currentQuote.expiresAt, wallet: String(form.get('walletAddress') ?? selectedWallet), provider: selectedProvider, network: String(form.get('network') ?? 'Ethereum') };
+      const fingerprint = JSON.stringify({ items: input.items, total: input.total, discount: input.discount, networkFee: input.networkFee, coupon: input.coupon, quoteVersion: input.quoteVersion, wallet: input.wallet, provider: input.provider, network: input.network });
+      const saved = localStorage.getItem('kurio-pending-order-key');
+      const savedTransaction = saved ? JSON.parse(saved) as { key: string; fingerprint: string } : undefined;
+      const key = savedTransaction?.fingerprint === fingerprint ? savedTransaction.key : crypto.randomUUID();
+      localStorage.setItem('kurio-pending-order-key', JSON.stringify({ key, fingerprint }));
+      let response;
+      try {
+        response = await createOrder.mutateAsync({ key, input });
+      } catch {
+        const recovery = await cartQuery.refetch().catch(() => undefined);
+        void recovery;
+        setConfirmationMessage('A resposta do pagamento não chegou. A tentativa foi guardada; confirme novamente para recuperar o mesmo pedido.');
+        return;
+      }
       if (response.status !== 'confirmed') {
+        if (response.status === 'pending') localStorage.setItem('kurio-pending-order-id', response.orderId);
+        if (response.status === 'rejected') localStorage.removeItem('kurio-pending-order-key');
         setConfirmationMessage(response.status === 'rejected' ? 'Pagamento recusado. O carrinho foi preservado.' : 'Pedido pendente. Consulte novamente em instantes.');
         return;
       }
-      sessionStorage.setItem('kurio-order-id', response.orderId);
-      sessionStorage.setItem('kurio-order-snapshot', JSON.stringify({ ...response, wallet: selectedWallet, provider: selectedProvider }));
+      localStorage.removeItem('kurio-pending-order-key');
+      localStorage.removeItem('kurio-pending-order-id');
+      localStorage.setItem('kurio-order-id', response.orderId);
+      localStorage.setItem('kurio-order-snapshot', JSON.stringify({ ...response, wallet: input.wallet, provider: input.provider, network: input.network }));
       await navigate({ to: '/order-confirmation' });
     } catch (error) {
       console.error('Não foi possível criar a prévia do recibo.', error);
@@ -100,7 +148,7 @@ const Checkout = () => {
                   total={total}
                   selectedProvider={selectedProvider}
                   onProviderChange={setSelectedProvider}
-                  confirmationMessage={confirmationMessage}
+                  confirmationMessage={paymentMessage}
                   couponApplied={Boolean(quoteQuery.data && discount > 0n)}
                 />
               </div>
@@ -115,7 +163,7 @@ const Checkout = () => {
           total={total}
           selectedProvider={selectedProvider}
           selectedWallet={selectedWallet}
-          confirmationMessage={confirmationMessage}
+          confirmationMessage={paymentMessage}
           onProviderChange={setSelectedProvider}
           onWalletChange={setSelectedWallet}
           onSwitchWallet={handleSwitchWallet}

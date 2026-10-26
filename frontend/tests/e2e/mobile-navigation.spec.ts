@@ -22,6 +22,10 @@ test('the mobile market shortcut keeps the mobile search and filters', async ({ 
 test('mobile NFT detail allows selecting edition and adding an item to cart', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'mobile-chromium');
 
+  await page.goto('/login');
+  await page.getByRole('textbox', { name: 'contato@email.com' }).fill('contato@email.com');
+  await page.getByRole('textbox', { name: 'Senha' }).first().fill('Kurio123');
+  await page.getByRole('button', { name: 'Entrar', exact: true }).last().click();
   await page.goto('/nft/42');
 
   await expect(page.getByRole('heading', { name: 'Emerald Ape #042' })).toBeVisible();

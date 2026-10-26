@@ -2,35 +2,37 @@
 
 ## Camadas
 
-- `src/services/api.ts`: cliente Axios e token Bearer fictício.
-- `src/services/contracts.ts`: contratos de transporte tipados; preços ETH são strings decimais.
-- `src/services/queries.ts`: consultas e mutations TanStack Query, chaves por recurso e atualização otimista do carrinho/favoritos.
-- `src/mocks/fixtures.ts` e `src/mocks/handlers.ts`: dataset e simulação REST em memória. `POST /api/mock/reset` limpa o estado.
-- `src/services/socket.ts` e `src/services/RealtimeSync.tsx`: cliente Socket.IO, eventos versionados, descarte de versões antigas e invalidação REST após reconexão.
+- `src/services/api.ts` centraliza Axios, Bearer token e tratamento de respostas 401.
+- `src/services/contracts.ts` tipa transporte e estado; valores ETH viajam como strings decimais.
+- `src/services/queries.ts` contém consultas/mutations TanStack Query. Quantidade do carrinho e favorito têm atualização otimista com rollback.
+- `src/mocks/fixtures.ts` e `src/mocks/handlers.ts` mantêm fixtures e contratos REST no MSW 2. O estado necessário para refresh (sessão, carrinhos, perfil, carteiras, favoritos, catálogo e pedidos) é serializado no navegador; palavras-passe persistidas ficam em hash.
+- `src/services/socket.ts` e `src/services/RealtimeSync.tsx` ligam `socket.io-client` aos eventos simulados pelo `@mswjs/socket.io-binding`.
 
-## REST simulado
+## Contratos REST
 
-| Método e recurso | Resultado |
+| Método e recurso | Comportamento |
 | --- | --- |
-| `GET /api/auth/session`, `POST /api/auth/register`, `/login`, `/logout` | sessão, autenticação fictícia, sessão Bearer em memória |
-| `GET /api/nfts?search&category&network&min&max&tab&sort&page&limit`, `GET /api/nfts/:id` | catálogo filtrado e detalhe; 404 para ID inexistente |
-| `GET /api/favorites`, `PUT/DELETE /api/favorites/:id` | favoritos isolados pelo usuário autenticado |
-| `GET /api/cart`, `POST /api/cart/items`, `PATCH/DELETE /api/cart/items/:id` | carrinho e validação de disponibilidade |
-| `POST /api/quotes` | cupom `KURIO10`, subtotal, desconto, taxa, total e expiração |
-| `POST /api/orders`, `GET /api/orders/:id` | criação/recuperação idempotente com `Idempotency-Key` e snapshot |
-| `GET/PATCH /api/profile`, `PUT /api/profile/password` | perfil e senha fictícia |
-| `GET/POST /api/wallets`, `PATCH /api/wallets/:id` | consulta, inclusão e edição de carteiras |
+| `POST /api/auth/register`, `/login`, `/logout`; `GET /api/auth/session` | Registo, login, logout e recuperação de sessão Bearer |
+| `GET /api/nfts?...`, `GET /api/nfts/:id` | Busca, filtros, ordenação, paginação e detalhe |
+| `GET /api/favorites`, `PUT/DELETE /api/favorites/:id` | Favoritos isolados por utilizador autenticado |
+| `GET /api/cart`, `POST /api/cart/items`, `PATCH/DELETE /api/cart/items/:id` | Carrinho privado e validação de quantidades/edições |
+| `POST /api/quotes` | Cupom, subtotal, desconto, taxa, total, versão e expiração |
+| `POST /api/orders`, `GET /api/orders/:id` | Pedido com `Idempotency-Key`, snapshot e leitura privada |
+| `GET/PATCH /api/profile`, `PUT /api/profile/password` | Perfil, dados e atualização de senha |
+| `GET/POST /api/wallets`, `PATCH /api/wallets/:id` | Consulta, criação e edição de carteiras |
 
-O reset é local ao worker (não persiste entre recargas completas). As credenciais iniciais são `contato@email.com` / `Kurio123` e `colecionador@email.com` / `Kurio123`. Não use dados reais. As sessões e senhas pertencem somente ao mock em memória.
+Carrinho e cotação recusam sessão ausente/expirada. Antes do pedido, o cliente atualiza carrinho e cotação, e o handler valida novamente os itens, preços, disponibilidade, cupom, versão, expiração, desconto e taxa. O fingerprint da tentativa exclui somente a expiração efémera da cotação; a chave permanece estável para recuperar o mesmo pedido depois de timeout. Reutilizar a chave com conteúdo diferente ou por outro utilizador resulta em conflito. Recusa e falha preservam o carrinho; confirmação remove apenas as unidades compradas.
 
-## Estado e sessão
+## Sessão, persistência e cache
 
-O token fictício fica em `localStorage`; ao receber 401, o Axios o remove. Rotas de checkout, recibo, perfil e carteiras validam a sessão por REST antes de renderizar. Query keys separam sessão, catálogo, favoritos, carrinho, perfil, carteiras e pedidos. O cache padrão usa `staleTime` de cinco minutos; sessão usa 30 segundos. Atualizações otimistas de quantidade e favorito revertem ao estado anterior em erro.
+O token fictício fica em `localStorage`; a sessão do mock e os dados privados são persistidos pelo MSW para permitir refresh. A API não guarda palavras-passe em claro após persistência. Logout, expiração e troca de conta limpam o cache Query, e eventos da sessão anterior são filtrados. Checkout, recibo, perfil, carteiras, favoritos, carrinho e cotação exigem autenticação. O cache global usa `staleTime` de cinco minutos e a sessão, 30 segundos. Queries aceitam `AbortSignal` onde aplicável; respostas e eventos usam versão para descartar estado antigo. O reset `POST /api/mock/reset` restaura os fixtures padrão.
 
 ## Tempo real
 
-O browser usa `socket.io-client` no endpoint `/socket.io`; o worker MSW usa `@mswjs/socket.io-binding` sobre WebSocket. O binding documenta limitações de rooms, namespaces e broadcasting. O cliente consome `nft.updated` e `order.updated` com `version`, descarta duplicatas/versões antigas e invalida os recursos REST ativos na reconexão. O ambiente atual ainda precisa de cenários UI que emitam ambos os eventos e de validação de compatibilidade do binding: a versão instalada de MSW é 3.0.3, mas o peer range do binding 0.2.0 declara MSW 2.10.2.
+O cliente usa Socket.IO em `/socket.io`; o MSW 2 interceta o transporte WebSocket e o binding simula o protocolo Socket.IO. Os eventos `nft.updated` e `order.updated` carregam identidade de recurso, utilizador e versão. A simulação inclui alterações determinísticas pelo endpoint `/api/mock/scenarios/nft-price-change` e transições de pedido em `/api/mock/scenarios/orders/:id/:status`. O cliente atualiza/invalida cache REST, ignora duplicatas ou versões antigas, filtra por sessão e reconcilia recursos ativos ao reconectar. O binding é uma simulação de browser e não substitui um servidor Socket.IO de produção; rooms e recursos de servidor podem divergir.
 
-## Limitações restantes
+## Cenários e limitações
 
-O estado mock é em memória, o catálogo de assets não cobre um backend persistente, e os eventos em tempo real não têm servidor Socket.IO de produção. Perfil/carteira são formulários iniciais e não cobrem ainda todos os campos e erros especificados. O reset, cenários determinísticos de lentidão/timeouts/falhas e testes completos devem ser expandidos antes da entrega. Ainda não há deploy configurado nem relatórios Lighthouse.
+Defina `localStorage.kurio_mock_scenario` como `slow`, `variable`, `empty`, `offline`, `server-error`, `timeout-after-create`, `payment-pending` ou `payment-rejected` para reproduzir resultados. O cenário e o estado simulado destinam-se a demonstração/testes, não a produção. O timeout após criar pedido pode ser recuperado com a mesma chave, inclusive após refresh; pedidos pendentes podem avançar para estado terminal pelos handlers de cenário.
+
+A suíte Playwright cobre os contratos e fluxos principais de compra/autenticação em desktop e mobile. Ainda falta a cobertura especificada para todos os formulários de perfil/senha/carteiras, navegação e foco por teclado, skeletons e retentativas, eventos duplicados/antigos e desconexão/retomada, além de regressão visual com baselines. A auditoria Lighthouse está configurada para três execuções por página/perfil, mas não há resultados medidos ainda. Não há deploy público configurado. Consultar `about_test.md` para a lista completa de critérios pendentes.

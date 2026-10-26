@@ -5,7 +5,7 @@ export default defineConfig({
   outputDir: './test-results',
   reporter: [['list'], ['html', { outputFolder: 'playwright-report', open: 'never' }]],
   use: {
-    baseURL: 'http://127.0.0.1:5181',
+    baseURL: 'http://127.0.0.1:5182',
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
@@ -20,8 +20,8 @@ export default defineConfig({
     },
   ],
   webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 5181',
-    url: 'http://127.0.0.1:5181',
+    command: 'npm run dev -- --host 127.0.0.1 --port 5182',
+    url: 'http://127.0.0.1:5182',
     reuseExistingServer: process.env.CI !== 'true',
     timeout: 30_000,
   },

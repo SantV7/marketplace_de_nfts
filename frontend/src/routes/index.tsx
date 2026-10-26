@@ -67,6 +67,7 @@ const learnRoute = createRoute({
 const cartRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/cart',
+  beforeLoad: requireSession,
   component: Cart,
 });
 
