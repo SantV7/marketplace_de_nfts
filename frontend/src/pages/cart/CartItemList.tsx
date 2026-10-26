@@ -1,5 +1,5 @@
 import { Minus, Plus } from 'lucide-react';
-import type { CartItem } from '@/libs/cartStore';
+import type { CartItem } from '@/services/contracts';
 import { formatEth, toEthUnits } from './cartPricing';
 
 interface CartItemListProps {

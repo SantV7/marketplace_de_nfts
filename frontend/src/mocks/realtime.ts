@@ -6,6 +6,7 @@ interface ClientSubscription {
   nftIds: number[];
   orderIds: string[];
   socket: ReturnType<typeof toSocketIo>['client'];
+  disconnect: () => void;
 }
 
 const clients = new Set<ClientSubscription>();
@@ -21,8 +22,17 @@ export const emitMockRealtime = (userId: string, name: 'nft.updated' | 'order.up
     if (subscribed) client.socket.emit(name, { ...data, userId });
   }
 };
+export const emitMockRealtimeForTest = (userId: string, name: 'nft.updated', data: Record<string, unknown>) => {
+  const resourceId = Number(data.id);
+  for (const client of clients) {
+    if (client.userId === userId && client.nftIds.includes(resourceId)) client.socket.emit(name, data);
+  }
+};
 
 export const getMockRealtimeSubscriptions = () => ({ connectionCount, clients: [...clients].map(({ userId, nftIds, orderIds }) => ({ userId, nftIds, orderIds })) });
+export const disconnectMockRealtime = (userId: string) => {
+  for (const client of clients) if (client.userId === userId) client.disconnect();
+};
 
 export const realtimeHandlers = [
   socketLink.addEventListener('connection', (connection) => {
@@ -33,7 +43,7 @@ export const realtimeHandlers = [
     client.on('subscribe', (_event, resource: { userId?: string; nftIds?: number[]; orderIds?: string[] }) => {
       if (subscription) clients.delete(subscription);
       if (!resource.userId) { subscription = undefined; return; }
-      subscription = { userId: resource.userId, nftIds: resource.nftIds ?? [], orderIds: resource.orderIds ?? [], socket: client };
+      subscription = { userId: resource.userId, nftIds: resource.nftIds ?? [], orderIds: resource.orderIds ?? [], socket: client, disconnect: () => connection.server.close() };
       clients.add(subscription);
       client.emit('subscribed', { version: Date.now() });
     });

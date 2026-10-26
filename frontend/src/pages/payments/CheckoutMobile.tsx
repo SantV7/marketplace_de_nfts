@@ -1,22 +1,20 @@
 import { ArrowLeft, MoreVertical } from 'lucide-react';
 import type { FormEventHandler } from 'react';
 import { Link } from '@tanstack/react-router';
+import type { Wallet } from '@/services/contracts';
 import { formatEth } from '@/pages/cart/cartPricing';
-import {
-  connectedWallets,
-  walletProviders,
-  type ConnectedWalletId,
-  type WalletProviderId,
-} from './paymentData';
+import { walletProviders, type WalletProviderId } from './paymentData';
 
 interface CheckoutMobileProps {
   total: bigint;
   selectedProvider: WalletProviderId;
-  selectedWallet: ConnectedWalletId;
+  selectedWallet: string;
+  wallets: Wallet[];
   confirmationMessage: string;
+  walletConnected: boolean;
   onProviderChange: (provider: WalletProviderId) => void;
-  onWalletChange: (wallet: ConnectedWalletId) => void;
-  onSwitchWallet: () => void;
+  onWalletChange: (wallet: string) => void;
+  onConnectWallet: () => void;
   onSubmit: FormEventHandler<HTMLFormElement>;
 }
 
@@ -40,10 +38,12 @@ const CheckoutMobile = ({
   total,
   selectedProvider,
   selectedWallet,
+  wallets,
   confirmationMessage,
+  walletConnected,
   onProviderChange,
   onWalletChange,
-  onSwitchWallet,
+  onConnectWallet,
   onSubmit,
 }: CheckoutMobileProps) => (
   <form
@@ -67,17 +67,11 @@ const CheckoutMobile = ({
         <h2 id="mobile-connected-wallet-heading" className="text-xs font-bold">
           Carteira conectada
         </h2>
-        <button
-          type="button"
-          onClick={onSwitchWallet}
-          className="text-xs font-bold text-[#D28A4C]"
-        >
-          Trocar carteira
-        </button>
+        <Link to="/wallets" className="text-xs font-bold text-[#D28A4C]">Gerir carteiras</Link>
       </div>
       <fieldset className="space-y-3">
         <legend className="sr-only">Selecione uma carteira conectada</legend>
-        {connectedWallets.map((wallet) => (
+        {wallets.map((wallet) => (
           <label
             key={wallet.id}
             className="flex min-h-[72px] cursor-pointer items-center gap-3 rounded-[15px] bg-[#241612] px-3"
@@ -85,9 +79,9 @@ const CheckoutMobile = ({
             <input
               type="radio"
               name="connectedWallet"
-              value={wallet.id}
+              value={wallet.address}
               checked={selectedWallet === wallet.id}
-              onChange={() => onWalletChange(wallet.id)}
+              onChange={() => onWalletChange(wallet.address)}
               className="peer sr-only"
             />
             <span
@@ -106,13 +100,14 @@ const CheckoutMobile = ({
                 {wallet.address}
               </span>
               <span className="block text-xs leading-4 text-[#B39463]">
-                {wallet.id === 'primary' ? 'Rede principal ' : 'Rede '}{wallet.network}
+                  {wallet.primary ? 'Rede principal ' : 'Rede '}{wallet.network}
               </span>
             </span>
             <MoreVertical className="h-4 w-4 shrink-0 text-[#B39463]" aria-hidden="true" />
           </label>
         ))}
       </fieldset>
+      {wallets.length === 0 && <p role="alert" className="mt-3 text-xs">Cadastre uma carteira antes de pagar.</p>}
     </section>
 
     <section className="mt-4" aria-labelledby="mobile-wallet-options-heading">
@@ -157,6 +152,9 @@ const CheckoutMobile = ({
       </fieldset>
     </section>
 
+    <input type="hidden" name="walletAddress" value={selectedWallet} />
+    <input type="hidden" name="network" value={wallets.find((wallet) => wallet.address === selectedWallet)?.network ?? ''} />
+
     <div className="mt-3 flex items-center justify-end gap-4 text-base font-bold">
       <span>Total:</span>
       <span className="text-[#D28A4C]">{formatEth(total)} ETH</span>
@@ -166,6 +164,10 @@ const CheckoutMobile = ({
         {confirmationMessage}
       </p>
     )}
+
+    <button type="button" onClick={onConnectWallet} disabled={!selectedWallet} className="mt-3 h-11 w-full rounded-full border border-[#D28A4C] text-xs font-bold text-[#D28A4C] disabled:opacity-50">
+      {walletConnected ? 'Desconectar carteira' : 'Conectar carteira'}
+    </button>
 
     <button
       type="submit"

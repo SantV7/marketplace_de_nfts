@@ -67,13 +67,14 @@ const ProductCatalog = ({
           ))}
         </div>
 
-        <div className="hidden items-center gap-2 text-xs text-[#CFB28C] md:flex">
+        <div className="flex w-full items-center justify-between gap-2 text-xs text-[#CFB28C] md:w-auto md:justify-start">
           <span className="flex items-center gap-1.5 whitespace-nowrap text-[15px] font-medium leading-4 text-[#F5F1EB]">
             <SlidersHorizontal className="h-3.5 w-3.5 text-[#D28A4C]" />
             Ordenar por:
           </span>
           <div className="relative inline-block">
             <select
+              aria-label="Ordenar NFTs"
               value={sortOrder}
               onChange={(event) => {
                 const value = event.currentTarget.value;

@@ -1,21 +1,21 @@
 import { lazy, Suspense } from 'react';
 import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
 import Navbar from '@/components/navbar/Navbar';
-import Home from '@/pages/home/Home';
-import Market from '@/pages/home/Market';
-import ProductDetail from '@/pages/nftDetails/ProductDetail';
-import Cart from '@/pages/cart/Cart';
-import Checkout from '@/pages/payments/Checkout';
-import OrderReceiptRoute from '@/pages/payments/OrderReceiptRoute';
 import { api } from '@/services/api';
 import type { Session } from '@/services/contracts';
-import { ProfilePage, WalletsPage } from '@/pages/profile/AccountPages';
 import { validateCatalogSearch } from './catalogSearch';
 import { redirect } from '@tanstack/react-router';
 
-
 const Auth = lazy(() => import('@/pages/auth/Auth'));
-
+const Home = lazy(() => import('@/pages/home/Home'));
+const Market = lazy(() => import('@/pages/home/Market'));
+const ProductDetail = lazy(() => import('@/pages/nftDetails/ProductDetail'));
+const Cart = lazy(() => import('@/pages/cart/Cart'));
+const Checkout = lazy(() => import('@/pages/payments/Checkout'));
+const OrderReceiptRoute = lazy(() => import('@/pages/payments/OrderReceiptRoute'));
+const ProfilePage = lazy(() => import('@/pages/profile/AccountPages').then((module) => ({ default: module.ProfilePage })));
+const WalletsPage = lazy(() => import('@/pages/profile/AccountPages').then((module) => ({ default: module.WalletsPage })));
+const PageFallback = () => <div role="status" className="min-h-svh animate-pulse bg-[#140D0A]" />;
 
 const rootRoute = createRootRoute({
   validateSearch: validateCatalogSearch,
@@ -36,20 +36,20 @@ const requireSession = async ({ location }: { location: { href: string } }) => {
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => <Home />,
+  component: () => <Suspense fallback={<PageFallback />}><Home /></Suspense>,
 });
 
 const nftDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/nft/$id',
-  component: () => <ProductDetail />,
+  component: () => <Suspense fallback={<PageFallback />}><ProductDetail /></Suspense>,
 });
 
 const marketRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/market',
   validateSearch: validateCatalogSearch,
-  component: Market,
+  component: () => <Suspense fallback={<PageFallback />}><Market /></Suspense>,
 });
 
 const creatorsRoute = createRoute({
@@ -67,26 +67,25 @@ const learnRoute = createRoute({
 const cartRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/cart',
-  beforeLoad: requireSession,
-  component: Cart,
+  component: () => <Suspense fallback={<PageFallback />}><Cart /></Suspense>,
 });
 
 const paymentRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/payment',
   beforeLoad: requireSession,
-  component: Checkout,
+  component: () => <Suspense fallback={<PageFallback />}><Checkout /></Suspense>,
 });
 
 const orderConfirmationRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/order-confirmation',
   beforeLoad: requireSession,
-  component: OrderReceiptRoute,
+  component: () => <Suspense fallback={<PageFallback />}><OrderReceiptRoute /></Suspense>,
 });
 
-const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireSession, component: ProfilePage });
-const walletsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/wallets', beforeLoad: requireSession, component: WalletsPage });
+const profileRoute = createRoute({ getParentRoute: () => rootRoute, path: '/profile', beforeLoad: requireSession, component: () => <Suspense fallback={<PageFallback />}><ProfilePage /></Suspense> });
+const walletsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/wallets', beforeLoad: requireSession, component: () => <Suspense fallback={<PageFallback />}><WalletsPage /></Suspense> });
 
 const loginRoute = createRoute({
   getParentRoute: () => rootRoute,

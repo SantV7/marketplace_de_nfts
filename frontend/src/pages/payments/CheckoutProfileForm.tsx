@@ -8,10 +8,14 @@ import {
   walletProviders,
 } from './paymentData';
 import type { WalletProviderId } from './paymentData';
+import type { Wallet } from '@/services/contracts';
 
 interface CheckoutProfileFormProps {
   selectedProvider: WalletProviderId;
   onProviderChange: (provider: WalletProviderId) => void;
+  wallets: Wallet[];
+  selectedWallet: string;
+  onWalletChange: (address: string) => void;
 }
 
 const fieldClassName =
@@ -20,6 +24,9 @@ const fieldClassName =
 const CheckoutProfileForm = ({
   selectedProvider,
   onProviderChange,
+  wallets,
+  selectedWallet,
+  onWalletChange,
 }: CheckoutProfileFormProps) => {
   const [useAnotherWallet, setUseAnotherWallet] = useState(false);
   const [ensDomain, setEnsDomain] = useState<(typeof ensDomains)[number]>('.eth');
@@ -54,13 +61,16 @@ const CheckoutProfileForm = ({
 
         <label className="block min-w-0 text-xs">
           <span className="mb-1 block">Endereço da carteira<span className="text-[#D28A4C]">*</span></span>
-          <input
+          <select
             name="walletAddress"
-            autoComplete="off"
             required
-            placeholder="Endereço 0x da carteira"
-            className={fieldClassName}
-          />
+            value={selectedWallet}
+            onChange={(event) => onWalletChange(event.target.value)}
+            className={`${fieldClassName} text-[#B39463]`}
+          >
+            <option value="" disabled>Selecione uma carteira cadastrada</option>
+            {wallets.map((wallet) => <option key={wallet.id} value={wallet.address}>{wallet.label} · {wallet.address} · {wallet.network}</option>)}
+          </select>
         </label>
         <label className="block min-w-0 text-xs">
           <span className="mb-1 block">ENS ou carteira secundária (opcional)</span>

@@ -1,4 +1,4 @@
-import type { CartItem } from '@/libs/cartStore';
+import type { CartItem } from '@/services/contracts';
 import { formatEth, toEthUnits } from '@/pages/cart/cartPricing';
 import { walletProviders, type WalletProviderId } from './paymentData';
 import { Link } from '@tanstack/react-router';

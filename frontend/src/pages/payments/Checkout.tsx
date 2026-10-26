@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate, useSearch } from '@tanstack/react-router';
 import { ArrowLeft } from 'lucide-react';
 import Footer from '@/components/footer/Footer';
@@ -8,12 +8,15 @@ import CheckoutOrderSummary from './CheckoutOrderSummary';
 import CheckoutMobile from './CheckoutMobile';
 import CheckoutProfileForm from './CheckoutProfileForm';
 import { useCart, useCreateOrder, useOrder, useQuote } from '@/services/queries';
+import { useWallets } from '@/services/queries';
+import { api } from '@/services/api';
+import type { Wallet } from '@/services/contracts';
 import {
-  connectedWallets,
   walletProviders,
-  type ConnectedWalletId,
   type WalletProviderId,
 } from './paymentData';
+
+const noWallets: Wallet[] = [];
 
 const Checkout = () => {
   const { coupon } = useSearch({ from: '/payment' });
@@ -21,18 +24,41 @@ const Checkout = () => {
   const cartQuery = useCart();
   const items = cartQuery.data ?? [];
   const quoteQuery = useQuote(coupon);
+  const walletsQuery = useWallets();
+  const wallets = walletsQuery.data ?? noWallets;
   const createOrder = useCreateOrder();
+  const submitLock = useRef(false);
   const [selectedProvider, setSelectedProvider] = useState<WalletProviderId>(
     walletProviders[2].id,
   );
-  const [selectedWallet, setSelectedWallet] = useState<ConnectedWalletId>(
-    connectedWallets[0].id,
-  );
+  const [selectedWalletAddress, setSelectedWalletAddress] = useState('');
+  const [connectedWalletAddress, setConnectedWalletAddress] = useState('');
+  const selectedWallet = selectedWalletAddress || wallets[0]?.address || '';
+  const walletConnected = connectedWalletAddress === selectedWallet && Boolean(selectedWallet);
   const [confirmationMessage, setConfirmationMessage] = useState('');
   const savedOrderKey = localStorage.getItem('kurio-pending-order-key');
   const recoveredKey = savedOrderKey ? (JSON.parse(savedOrderKey) as { key?: string }).key : undefined;
   const pendingOrderId = localStorage.getItem('kurio-pending-order-id') ?? (recoveredKey ? `ORD-${recoveredKey.slice(0, 12)}` : '');
   const pendingOrder = useOrder(pendingOrderId);
+
+  const handleWalletConnection = async () => {
+    const wallet = wallets.find((entry) => entry.address === selectedWallet);
+    if (!wallet) return;
+    try {
+      if (walletConnected) {
+        await api.post(`/wallets/${encodeURIComponent(wallet.id)}/disconnect`);
+        setConnectedWalletAddress('');
+        setConfirmationMessage('Carteira desconectada.');
+      } else {
+        await api.post(`/wallets/${encodeURIComponent(wallet.id)}/connect`);
+        setConnectedWalletAddress(selectedWallet);
+        setConfirmationMessage('Carteira conectada.');
+      }
+    } catch {
+      setConnectedWalletAddress('');
+      setConfirmationMessage('A conexão da carteira foi recusada. Tente novamente.');
+    }
+  };
 
   useEffect(() => {
     const onNftUpdated = () => setConfirmationMessage('Preço ou disponibilidade alterados. A cotação foi atualizada; revise antes de confirmar.');
@@ -59,8 +85,13 @@ const Checkout = () => {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     if (items.length === 0) return;
+    if (!wallets.length || !walletConnected) {
+      setConfirmationMessage('Selecione e conecte uma carteira cadastrada antes de confirmar.');
+      return;
+    }
 
-    if (createOrder.isPending) return;
+    if (submitLock.current || createOrder.isPending) return;
+    submitLock.current = true;
     try {
       const previousQuote = quoteQuery.data;
       const [freshCart, freshQuote] = await Promise.all([cartQuery.refetch(), quoteQuery.refetch()]);
@@ -107,15 +138,9 @@ const Checkout = () => {
       setConfirmationMessage(
         'Não foi possível abrir a confirmação demonstrativa. Tente novamente.',
       );
+    } finally {
+      submitLock.current = false;
     }
-  };
-
-  const handleSwitchWallet = () => {
-    setSelectedWallet((currentWallet) =>
-      currentWallet === connectedWallets[0].id
-        ? connectedWallets[1].id
-        : connectedWallets[0].id,
-    );
   };
 
   return (
@@ -139,6 +164,9 @@ const Checkout = () => {
                 <CheckoutProfileForm
                   selectedProvider={selectedProvider}
                   onProviderChange={setSelectedProvider}
+                  wallets={wallets}
+                  selectedWallet={selectedWallet}
+                  onWalletChange={setSelectedWalletAddress}
                 />
                 <CheckoutOrderSummary
                   items={items}
@@ -152,6 +180,9 @@ const Checkout = () => {
                   couponApplied={Boolean(quoteQuery.data && discount > 0n)}
                 />
               </div>
+              <button type="button" onClick={handleWalletConnection} disabled={!selectedWallet} className="mt-6 rounded border border-[#D28A4C] px-5 py-3 text-sm text-[#D28A4C]">
+                {walletConnected ? 'Desconectar carteira' : 'Conectar carteira'}
+              </button>
             </form>
           )}
         </main>
@@ -163,10 +194,12 @@ const Checkout = () => {
           total={total}
           selectedProvider={selectedProvider}
           selectedWallet={selectedWallet}
+          wallets={wallets}
           confirmationMessage={paymentMessage}
           onProviderChange={setSelectedProvider}
-          onWalletChange={setSelectedWallet}
-          onSwitchWallet={handleSwitchWallet}
+          onWalletChange={setSelectedWalletAddress}
+          onConnectWallet={handleWalletConnection}
+          walletConnected={walletConnected}
           onSubmit={handleSubmit}
         />
       ) : (

@@ -13,6 +13,17 @@ test('catalog search is sent to the HTTP mock and preserved in the URL', async (
   expect(calls.some((url) => url.includes('search=Emerald'))).toBeTruthy();
 });
 
+test('changing a catalog tab keeps the current scroll position', async ({ page }) => {
+  await page.goto('/market');
+  const tab = page.getByRole('tab', { name: 'Novos lançamentos' });
+  await tab.scrollIntoViewIfNeeded();
+  const scrollBefore = await page.evaluate(() => window.scrollY);
+  await tab.click();
+  await expect(page).toHaveURL(/tab=new/);
+  const scrollAfter = await page.evaluate(() => window.scrollY);
+  expect(Math.abs(scrollAfter - scrollBefore)).toBeLessThan(20);
+});
+
 test('detail displays API not-found state for an unknown NFT', async ({ page }) => {
   await page.goto('/nft/404404');
   await expect(page.getByRole('heading', { name: /NFT não encontrado/i })).toBeVisible();

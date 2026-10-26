@@ -56,7 +56,7 @@ const CartSummary = ({
       <p
         id="coupon-feedback"
         role={couponMessage.startsWith('Cupom inválido') ? 'alert' : 'status'}
-        className={`mt-2 hidden min-h-4 text-[11px] md:block ${
+        className={`mt-2 min-h-4 text-[11px] ${
           couponMessage.startsWith('Cupom inválido') ? 'text-red-400' : 'text-[#B39463]'
         }`}
       >
@@ -66,7 +66,7 @@ const CartSummary = ({
         <button
           type="button"
           onClick={onRemoveCoupon}
-          className="hidden text-[11px] text-[#D28A4C] underline underline-offset-2 md:block"
+          className="text-[11px] text-[#D28A4C] underline underline-offset-2"
         >
           Remover cupom
         </button>

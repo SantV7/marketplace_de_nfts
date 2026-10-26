@@ -44,9 +44,9 @@ const ProductsContent = ({
   const location = useLocation();
   const updateSearch = (updater: (previous: CatalogSearch) => CatalogSearch) => {
     if (location.pathname === '/market') {
-      void router.navigate({ to: '/market', search: updater });
+      void router.navigate({ to: '/market', search: updater, resetScroll: false });
     } else {
-      void router.navigate({ to: '/', search: updater });
+      void router.navigate({ to: '/', search: updater, resetScroll: false });
     }
   };
   const [draftPriceRange, setDraftPriceRange] = useState({

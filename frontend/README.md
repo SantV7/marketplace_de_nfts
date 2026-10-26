@@ -1,8 +1,8 @@
 # KURIO NFT Marketplace
 
-Frontend responsivo em React e TypeScript para o desafio descrito em [about_test.md](about_test.md). A aplicação usa TanStack Router e Query, Axios, Tailwind, MSW e Socket.IO para os fluxos de catálogo, conta e compra simulada. Os mocks funcionam no desenvolvimento e podem ser incluídos no build de demonstração.
+Frontend responsivo do desafio descrito em [about_test.md](about_test.md), construído com React, TypeScript, TanStack Router/Query, Axios, Tailwind, MSW e Socket.IO. Os fluxos de descoberta, conta, carrinho, pagamento e recibo usam APIs REST simuladas.
 
-## Executar
+## Execução local
 
 Requer Node.js compatível com Vite 8 e npm.
 
@@ -11,25 +11,41 @@ npm ci
 npm run dev
 ```
 
-Credenciais fictícias: `contato@email.com` / `Kurio123` e `colecionador@email.com` / `Kurio123`. Para incluir MSW num build de demonstração, configure `VITE_ENABLE_MOCKS=true` antes do build. Não introduza credenciais ou dados reais.
+Credenciais de demonstração: `contato@email.com` / `Kurio123` e `colecionador@email.com` / `Kurio123`.
 
-| Comando | Objetivo |
+| Comando | Uso |
 | --- | --- |
 | `npm run dev` | Desenvolvimento com MSW |
-| `npm run typecheck` | Verificação TypeScript |
+| `npm run typecheck` | Verificar TypeScript |
 | `npm run lint` | ESLint |
-| `npm run build` | Typecheck e build de produção |
-| `npm run preview` | Servir o build localmente |
-| `npm run test:e2e` | Playwright em Chromium desktop e mobile |
-| `npm run test:e2e:report` | Abrir o relatório Playwright mais recente |
-| `npm run audit:lighthouse` | Auditoria configurada para home e detalhe |
+| `npm run build` | Build de produção |
+| `npm run preview` | Preview do build |
+| `npx playwright test` | Playwright desktop/mobile e relatório HTML |
+| `npm run test:e2e:report` | Abrir o relatório Playwright |
+| `npm run audit:lighthouse` | Build com mocks e 3 auditorias por rota/perfil |
+| `npm run audit:lighthouse:summary` | Regenerar medianas a partir dos relatórios JSON existentes |
 
-## Cenários e contratos
+## Mocks e cenários
 
-O estado de demonstração pode ser persistido entre refreshes em `localStorage`; `POST /api/mock/reset` restaura os fixtures. Defina `kurio_mock_scenario` para `slow`, `variable`, `empty`, `offline`, `server-error`, `timeout-after-create`, `payment-pending` ou `payment-rejected` para reproduzir cenários. A autenticação é obrigatória em carrinho, cotações, favoritos, pedidos, perfil e carteiras. O checkout valida novamente carrinho, preço, disponibilidade, cupom, taxa e versão da cotação. Uma tentativa de pedido mantém a mesma chave de idempotência na recuperação de timeout.
+O MSW é ativado em desenvolvimento e pode ser incluído no build de demonstração com `VITE_ENABLE_MOCKS=true`. `POST /api/mock/reset` restaura os fixtures. Estado de demonstração persiste em `localStorage` para permitir refresh. A chave `kurio_mock_scenario` aceita `slow`, `variable`, `empty`, `offline`, `server-error`, `favorite-failure-once`, `wallet-connection-rejected`, `timeout-after-create`, `payment-pending` e `payment-rejected`.
 
-Os endpoints REST, os eventos Socket.IO, a política de sessão/cache e as limitações da simulação estão descritos em [ARCHITECTURE.md](ARCHITECTURE.md). A suíte atual cobre autenticação e isolamento, persistência, cupom, preço desatualizado, timeout/idempotência, recusa e eventos em tempo real em ambos os viewports.
+O carrinho visitante é identificado localmente e mesclado na conta após login. Checkout, perfil, carteiras, favoritos e pedidos exigem sessão. Contratos REST, política de cache, eventos e limites do transporte estão em [ARCHITECTURE.md](ARCHITECTURE.md).
 
-## Estado da entrega
+## Evidências e entrega
 
-O núcleo de rede e os fluxos de compra estão implementados e a suíte Playwright atual é executável. A conformidade integral do desafio ainda depende de concluir os cenários E2E de perfil/carteiras, acessibilidade, estados lentos e recuperação, eventos duplicados/antigos e desconexão, além de regressão visual com baselines. Lighthouse está configurado, mas as medições e as metas ainda precisam ser comprovadas. Não existe deploy público configurado; a publicação exige uma conta de hospedagem e URL acessível.
+### Resultados da auditoria Lighthouse
+
+Mediana de tres execucoes por pagina e perfil, em build com mocks (Lighthouse 13.5.0, Headless Chrome 156, Node 24.14.1, Windows):
+
+| Pagina | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Inicio | Mobile | 66 | 95 | 96 | 100 | 3849 ms | 0.000 | 704 ms |
+| Inicio | Desktop | 42 | 97 | 96 | 100 | 3672 ms | 0.007 | 539 ms |
+| Detalhe NFT | Mobile | 59 | 100 | 96 | 100 | 3793 ms | 0.000 | 1370 ms |
+| Detalhe NFT | Desktop | 63 | 95 | 96 | 100 | 3802 ms | 0.002 | 100 ms |
+
+Performance ficou abaixo de 90 nas quatro combinacoes. Os relatorios medem LCP entre 3.67 s e 3.85 s, tarefa JavaScript bloqueante mais alta no detalhe mobile, cerca de 95 kB de JavaScript nao utilizado na amostra mobile da pagina inicial e aproximadamente 150 ms de recursos que bloqueiam a renderizacao. O build completo de demonstracao inclui MSW, contratos, Socket.IO, assets e fluxos obrigatorios; esses custos explicam as pontuacoes abaixo da meta. Acessibilidade, Best Practices e SEO atingiram as metas em todas as combinacoes. Os detalhes estao nos relatorios HTML/JSON e em `lighthouse-reports/summary.json`.
+
+Testes e baselines visuais ficam em `tests/e2e/`; auditorias e medianas são gravadas em `lighthouse-reports/`. Confira `lighthouse-reports/summary.json` para pontuações, LCP, CLS, TBT e versões do ambiente.
+
+O deploy público ainda precisa ser configurado e testado com acesso direto/refresh. A aplicação usa mocks e não depende de backend de produção.

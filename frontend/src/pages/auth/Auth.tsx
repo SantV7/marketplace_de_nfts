@@ -396,6 +396,7 @@ const AuthInput = ({
         onChange={(event) => onChange(event.target.value)}
         placeholder={label}
         autoComplete={autoComplete}
+        aria-required="true"
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
         className="min-w-0 flex-1 bg-transparent px-3.5 py-2 text-center text-xs text-[#F5F1EB] outline-none placeholder:text-[#B39463] md:text-left"

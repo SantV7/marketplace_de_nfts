@@ -1,5 +1,5 @@
 import { Link, useLocation } from '@tanstack/react-router';
-import { useCartItems } from '@/libs/cartStore';
+import { useCart } from '@/services/queries';
 
 const HomeIcon = () => (
   <svg
@@ -59,7 +59,7 @@ const HeartIcon = () => (
 
 const MobileHomeNavbar = () => {
   const { pathname } = useLocation();
-  const cartItems = useCartItems();
+  const cartItems = useCart().data ?? [];
   const cartCount = cartItems.reduce((count, item) => count + item.quantity, 0);
   const homeActive = pathname === '/';
   const marketActive = pathname === '/market';

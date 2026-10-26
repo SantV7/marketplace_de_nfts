@@ -54,6 +54,11 @@ export const mockFavorites = new Map<string, Set<number>>();
 export const mockOrders = new Map<string, { fingerprint: string; order: Record<string, unknown> }>();
 export const mockProfiles = new Map<string, Record<string, unknown>>();
 export const mockWallets = new Map<string, Array<Record<string, unknown>>>();
+const defaultWallets: Array<[string, Array<Record<string, unknown>>]> = [
+  ['usr_1', [{ id: 'wallet_1', address: '0xA91F00000000000000000000000000000000E82C', label: 'Principal', network: 'Ethereum', primary: true }, { id: 'wallet_2', address: 'nova.kurio.eth', label: 'Reserva', network: 'Polygon', primary: false }]],
+  ['usr_2', [{ id: 'wallet_3', address: '0xB83A00000000000000000000000000000000A73D', label: 'Principal', network: 'Ethereum', primary: true }]],
+];
+defaultWallets.forEach(([userId, wallets]) => mockWallets.set(userId, wallets.map((wallet) => ({ ...wallet }))));
 export const idempotentOrders = new Map<string, { fingerprint: string; order: Record<string, unknown> }>();
 export const mockSessions = new Map<string, string>();
 
@@ -113,6 +118,7 @@ export const resetMockState = () => {
   mockOrders.clear();
   mockProfiles.clear();
   mockWallets.clear();
+  defaultWallets.forEach(([userId, wallets]) => mockWallets.set(userId, wallets.map((wallet) => ({ ...wallet }))));
   idempotentOrders.clear();
   mockSessions.clear();
   mockUserCarts.clear();

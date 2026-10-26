@@ -1,0 +1,221 @@
+{
+  "generatedAt": "2026-10-26T03:23:19.003Z",
+  "lighthouseVersion": "13.5.0",
+  "chromeVersion": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36",
+  "nodeVersion": "v24.14.1",
+  "platform": "win32",
+  "summaries": [
+    {
+      "page": "home",
+      "profile": "mobile",
+      "median": {
+        "performance": 66,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 100
+      },
+      "metricsMedian": {
+        "LCP": 3849.24275,
+        "CLS": 0,
+        "TBT": 704.2928499999981
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 58,
+            "accessibility": 95,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 4043.3250000000003,
+          "CLS": 0,
+          "TBT": 1174.4675000000007,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        },
+        {
+          "scores": {
+            "performance": 68,
+            "accessibility": 95,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3849.24275,
+          "CLS": 0,
+          "TBT": 627.4999999999991,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        },
+        {
+          "scores": {
+            "performance": 66,
+            "accessibility": 95,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3839.071499999999,
+          "CLS": 0,
+          "TBT": 704.2928499999981,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "page": "home",
+      "profile": "desktop",
+      "median": {
+        "performance": 42,
+        "accessibility": 97,
+        "best-practices": 96,
+        "seo": 100
+      },
+      "metricsMedian": {
+        "LCP": 3671.8232499999995,
+        "CLS": 0.006969948941554667,
+        "TBT": 538.7176749999971
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 35,
+            "accessibility": 97,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3608.4394999999995,
+          "CLS": 0.006969948941554667,
+          "TBT": 2012.7121000000004,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        },
+        {
+          "scores": {
+            "performance": 42,
+            "accessibility": 97,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3671.8232499999995,
+          "CLS": 0.00810579573202011,
+          "TBT": 538.7176749999971,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        },
+        {
+          "scores": {
+            "performance": 43,
+            "accessibility": 97,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3805.1625,
+          "CLS": 0.006969948941554667,
+          "TBT": 494.58375,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "page": "nft-detail",
+      "profile": "mobile",
+      "median": {
+        "performance": 59,
+        "accessibility": 100,
+        "best-practices": 96,
+        "seo": 100
+      },
+      "metricsMedian": {
+        "LCP": 3792.654250000001,
+        "CLS": 0.0003385678085363347,
+        "TBT": 1369.5
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 55,
+            "accessibility": 100,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3739.349,
+          "CLS": 0.0003385678085363347,
+          "TBT": 5975.325499999999,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        },
+        {
+          "scores": {
+            "performance": 84,
+            "accessibility": 100,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3792.654250000001,
+          "CLS": 0.0003385678085363347,
+          "TBT": 116,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        },
+        {
+          "scores": {
+            "performance": 59,
+            "accessibility": 100,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3871.3277500000013,
+          "CLS": 0.0003385678085363347,
+          "TBT": 1369.5,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        }
+      ]
+    },
+    {
+      "page": "nft-detail",
+      "profile": "desktop",
+      "median": {
+        "performance": 63,
+        "accessibility": 95,
+        "best-practices": 96,
+        "seo": 100
+      },
+      "metricsMedian": {
+        "LCP": 3801.856500000001,
+        "CLS": 0.002375587402961595,
+        "TBT": 100.49999999999955
+      },
+      "runs": [
+        {
+          "scores": {
+            "performance": 64,
+            "accessibility": 95,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3801.856500000001,
+          "CLS": 0.002375587402961595,
+          "TBT": 100,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        },
+        {
+          "scores": {
+            "performance": 59,
+            "accessibility": 95,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3770.21475,
+          "CLS": 0.002375587402961595,
+          "TBT": 179.2785250000005,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        },
+        {
+          "scores": {
+            "performance": 63,
+            "accessibility": 95,
+            "best-practices": 96,
+            "seo": 100
+          },
+          "LCP": 3820.814749999999,
+          "CLS": 0.002375587402961595,
+          "TBT": 100.49999999999955,
+          "userAgent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/156.0.0.0 Safari/537.36"
+        }
+      ]
+    }
+  ]
+}

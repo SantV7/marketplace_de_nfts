@@ -2,12 +2,12 @@ import { useState, type FormEvent, type KeyboardEvent } from 'react';
 import { Link, useLocation } from '@tanstack/react-router';
 import { router } from '@/routes';
 import { Search, ShoppingCart, X } from 'lucide-react';
-import { useCartItems } from '@/libs/cartStore';
+import { useCart } from '@/services/queries';
 
 export const Navbar = () => {
   const [searchValue, setSearchValue] = useState('');
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const cartItems = useCartItems();
+  const cartItems = useCart().data ?? [];
   const badgeCount = cartItems.reduce((count, item) => count + item.quantity, 0);
 
   const location = useLocation();

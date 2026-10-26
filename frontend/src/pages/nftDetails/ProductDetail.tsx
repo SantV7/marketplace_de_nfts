@@ -25,6 +25,7 @@ const ProductDetailContent = ({ id }: { id: string }) => {
   const favoritesQuery = useFavorites();
   const toggleFavorite = useToggleFavorite();
   const [cartError, setCartError] = useState('');
+  const [favoriteError, setFavoriteError] = useState('');
   const [selectedStyle, setSelectedStyle] = useState(nftStyles[0]);
   const [selectedEdition, setSelectedEdition] = useState('1/50');
   const [quantity, setQuantity] = useState(1);
@@ -76,6 +77,15 @@ const ProductDetailContent = ({ id }: { id: string }) => {
     );
   };
 
+  const handleToggleFavorite = async () => {
+    try {
+      await toggleFavorite.mutateAsync({ id: Number(id), active: isFavorite });
+      setFavoriteError('');
+    } catch {
+      setFavoriteError('Não foi possível atualizar os favoritos. Tente novamente.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-[#140D0A]">
       <div className="hidden md:block">
@@ -91,11 +101,11 @@ const ProductDetailContent = ({ id }: { id: string }) => {
         quantity={quantity}
         availableQuantity={availableQuantity}
         isFavorite={isFavorite}
-        cartError={cartError}
+        cartError={cartError || favoriteError}
         onSelectEdition={handleSelectEdition}
         onQuantityChange={setQuantity}
         onAddToCart={handleAddToCart}
-        onToggleFavorite={() => toggleFavorite.mutate({ id: Number(id), active: isFavorite })}
+        onToggleFavorite={handleToggleFavorite}
       />
 
       <div className="hidden md:block">
@@ -122,11 +132,11 @@ const ProductDetailContent = ({ id }: { id: string }) => {
               quantity={quantity}
               availableQuantity={availableQuantity}
               isFavorite={isFavorite}
-              cartError={cartError}
+              cartError={cartError || favoriteError}
               onSelectEdition={handleSelectEdition}
               onQuantityChange={setQuantity}
               onAddToCart={handleAddToCart}
-              onToggleFavorite={() => toggleFavorite.mutate({ id: Number(id), active: isFavorite })}
+              onToggleFavorite={handleToggleFavorite}
             />
           </div>
 

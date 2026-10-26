@@ -119,6 +119,8 @@ const NftPurchasePanel = ({
         <button
           type="button"
           onClick={onToggleFavorite}
+          aria-label={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+          aria-pressed={isFavorite}
           className={`flex h-12 items-center gap-2 rounded-xl border px-5 text-[14px] transition-colors cursor-pointer ${
             isFavorite
               ? 'border-[#D28A4C] bg-[#D28A4C]/10 text-[#D28A4C]'

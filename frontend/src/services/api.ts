@@ -20,6 +20,12 @@ api.interceptors.response.use(
 );
 
 api.interceptors.request.use((config) => {
+  let guestId = localStorage.getItem('kurio_guest_id');
+  if (!guestId) {
+    guestId = crypto.randomUUID();
+    localStorage.setItem('kurio_guest_id', guestId);
+  }
+  config.headers['X-Guest-ID'] = guestId;
   const token = localStorage.getItem('kurio_token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
