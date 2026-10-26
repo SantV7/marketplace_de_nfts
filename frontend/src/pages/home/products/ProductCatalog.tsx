@@ -97,7 +97,7 @@ const ProductCatalog = ({
 
       {loading ? <div role="status" className="grid grid-cols-2 gap-6 xl:grid-cols-3">{Array.from({ length: 6 }, (_, index) => <div key={index} className="aspect-[0.8] animate-pulse rounded-2xl bg-[#231712]" />)}</div> : error ? <p role="alert" className="py-16 text-center text-sm text-[#CFB28C]">{error}</p> : products.length > 0 ? (
         <div className="grid grid-cols-2 gap-x-4 gap-y-8 min-[520px]:gap-x-6 [&>article:nth-child(even)]:translate-y-8 md:[&>article:nth-child(even)]:translate-y-0 xl:grid-cols-3">
-          {products.map((nft) => (
+          {products.map((nft, index) => (
             <Card
               key={nft.id}
               img={nft.image}
@@ -105,6 +105,7 @@ const ProductCatalog = ({
               idNft={nft.id}
               price={nft.price}
               previousPrice={nft.previousPrice}
+              isPriority={index === 0}
             />
           ))}
         </div>

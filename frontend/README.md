@@ -19,6 +19,7 @@ Credenciais de demonstração: `contato@email.com` / `Kurio123` e `colecionador@
 | `npm run typecheck` | Verificar TypeScript |
 | `npm run lint` | ESLint |
 | `npm run build` | Build de produção |
+| `npm run build:demo` | Build de demonstração com MSW habilitado |
 | `npm run preview` | Preview do build |
 | `npx playwright test` | Playwright desktop/mobile e relatório HTML |
 | `npm run test:e2e:report` | Abrir o relatório Playwright |
@@ -27,7 +28,7 @@ Credenciais de demonstração: `contato@email.com` / `Kurio123` e `colecionador@
 
 ## Mocks e cenários
 
-O MSW é ativado em desenvolvimento e pode ser incluído no build de demonstração com `VITE_ENABLE_MOCKS=true`. `POST /api/mock/reset` restaura os fixtures. Estado de demonstração persiste em `localStorage` para permitir refresh. A chave `kurio_mock_scenario` aceita `slow`, `variable`, `empty`, `offline`, `server-error`, `favorite-failure-once`, `wallet-connection-rejected`, `timeout-after-create`, `payment-pending` e `payment-rejected`.
+O MSW é ativado em desenvolvimento. Use `npm run build:demo` para gerar a demonstração pronta para publicar, com os mocks habilitados pelo `.env.demo`. `POST /api/mock/reset` restaura os fixtures. Estado de demonstração persiste em `localStorage` para permitir refresh. A chave `kurio_mock_scenario` aceita `slow`, `variable`, `empty`, `offline`, `server-error`, `favorite-failure-once`, `wallet-connection-rejected`, `timeout-after-create`, `payment-pending` e `payment-rejected`.
 
 O carrinho visitante é identificado localmente e mesclado na conta após login. Checkout, perfil, carteiras, favoritos e pedidos exigem sessão. Contratos REST, política de cache, eventos e limites do transporte estão em [ARCHITECTURE.md](ARCHITECTURE.md).
 
@@ -39,13 +40,15 @@ Mediana de tres execucoes por pagina e perfil, em build com mocks (Lighthouse 13
 
 | Pagina | Perfil | Performance | Accessibility | Best Practices | SEO | LCP | CLS | TBT |
 | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| Inicio | Mobile | 66 | 95 | 96 | 100 | 3849 ms | 0.000 | 704 ms |
-| Inicio | Desktop | 42 | 97 | 96 | 100 | 3672 ms | 0.007 | 539 ms |
-| Detalhe NFT | Mobile | 59 | 100 | 96 | 100 | 3793 ms | 0.000 | 1370 ms |
-| Detalhe NFT | Desktop | 63 | 95 | 96 | 100 | 3802 ms | 0.002 | 100 ms |
+| Inicio | Mobile | 65 | 95 | 96 | 100 | 5014 ms | 0.000 | 463 ms |
+| Inicio | Desktop | 38 | 97 | 96 | 100 | 4892 ms | 0.007 | 570 ms |
+| Detalhe NFT | Mobile | 76 | 100 | 96 | 100 | 4807 ms | 0.000 | 180 ms |
+| Detalhe NFT | Desktop | 58 | 95 | 96 | 100 | 4876 ms | 0.002 | 159 ms |
 
-Performance ficou abaixo de 90 nas quatro combinacoes. Os relatorios medem LCP entre 3.67 s e 3.85 s, tarefa JavaScript bloqueante mais alta no detalhe mobile, cerca de 95 kB de JavaScript nao utilizado na amostra mobile da pagina inicial e aproximadamente 150 ms de recursos que bloqueiam a renderizacao. O build completo de demonstracao inclui MSW, contratos, Socket.IO, assets e fluxos obrigatorios; esses custos explicam as pontuacoes abaixo da meta. Acessibilidade, Best Practices e SEO atingiram as metas em todas as combinacoes. Os detalhes estao nos relatorios HTML/JSON e em `lighthouse-reports/summary.json`.
+Performance ficou abaixo de 90 nas quatro combinacoes. O LCP mediano ficou entre 4.8 s e 5.0 s. A imagem LCP agora e descoberta no HTML e transfere em 8-30 ms; a demora principal vem da avaliacao de JavaScript e da montagem do app antes de os dados REST aparecerem. O trabalho de avaliacao de scripts chegou a 6.6 s em uma medicao desktop sob o perfil de auditoria. O build inclui a camada completa de MSW, contratos, Socket.IO e fluxos obrigatorios. Acessibilidade, Best Practices e SEO atingiram as metas em todas as combinacoes. Os relatorios HTML/JSON mostram as medidas por execucao e estao resumidos em `lighthouse-reports/summary.json`.
 
 Testes e baselines visuais ficam em `tests/e2e/`; auditorias e medianas são gravadas em `lighthouse-reports/`. Confira `lighthouse-reports/summary.json` para pontuações, LCP, CLS, TBT e versões do ambiente.
 
-O deploy público ainda precisa ser configurado e testado com acesso direto/refresh. A aplicação usa mocks e não depende de backend de produção.
+### Publicação
+
+Para Vercel, selecione `frontend` como diretório raiz, use `npm run build:demo` como comando de build e `dist` como diretório de saída. `vercel.json` encaminha rotas da aplicação para `index.html`, permitindo acesso direto e refresh. Para Netlify, `public/_redirects` fornece o fallback equivalente. Confirme `/`, `/market`, `/nft/42`, `/cart`, `/payment` e `/order-confirmation` no domínio publicado. A aplicação usa mocks e não depende de backend de produção.

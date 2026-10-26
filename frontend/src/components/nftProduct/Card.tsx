@@ -7,9 +7,10 @@ interface NftCardProps {
   idNft: number;
   price: string;
   previousPrice?: string;
+  isPriority?: boolean;
 }
 
-const Card = ({ img, nameNft, idNft, price, previousPrice }: NftCardProps) => {
+const Card = ({ img, nameNft, idNft, price, previousPrice, isPriority = false }: NftCardProps) => {
   const navigate = useNavigate();
 
   const handleCardClick = () => {
@@ -25,7 +26,8 @@ const Card = ({ img, nameNft, idNft, price, previousPrice }: NftCardProps) => {
         <img
           src={img}
           alt={`${nameNft} NFT`}
-          loading="lazy"
+          loading={isPriority ? 'eager' : 'lazy'}
+          fetchPriority={isPriority ? 'high' : 'auto'}
           className="aspect-square h-full w-full rounded-[15px] object-cover"
         />
         <button

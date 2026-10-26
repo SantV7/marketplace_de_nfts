@@ -9,6 +9,7 @@
     "typecheck": "tsc -b --pretty",
     "lint": "eslint .",
     "preview": "vite preview",
+    "build:demo": "tsc -b && vite build --mode demo",
     "test:e2e": "playwright test",
     "test:e2e:report": "playwright show-report",
     "audit:lighthouse": "node scripts/lighthouse.mjs",

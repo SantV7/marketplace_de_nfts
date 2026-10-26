@@ -13,7 +13,7 @@ const out = path.resolve('lighthouse-reports');
 await mkdir(out, { recursive: true });
 const chrome = process.env.CHROME_PATH ?? chromium.executablePath();
 const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-const build = spawn(npm, ['run', 'build'], { stdio: 'inherit', shell: process.platform === 'win32', env: { ...process.env, VITE_ENABLE_MOCKS: 'true' } });
+const build = spawn(npm, ['run', 'build:demo'], { stdio: 'inherit', shell: process.platform === 'win32' });
 const buildExitCode = await new Promise((resolve) => build.on('exit', resolve));
 if (buildExitCode !== 0) process.exit(Number(buildExitCode) || 1);
 const server = spawn(process.execPath, ['node_modules/vite/bin/vite.js', 'preview', '--host', '127.0.0.1', '--port', '4173'], { stdio: 'ignore' });
